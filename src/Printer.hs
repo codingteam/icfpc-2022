@@ -24,7 +24,7 @@ printOrientation Vertical = "x"
 printOrientation Horizontal = "y"
 
 printColor :: Color -> T.Text
-printColor (PixelRGBA8 r g b a) = "[" <> (T.intercalate "," $ map (T.pack . show) [r, g, b, a])
+printColor (PixelRGBA8 r g b a) = "[" <> (T.intercalate "," $ map (T.pack . show) [r, g, b, a]) <> "]"
 
 printMove :: Move -> T.Text
 printMove (PointCut block point) = "cut " <> printBlock block <> " " <> printPoint point
