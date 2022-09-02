@@ -4,8 +4,9 @@ module DummySolver where
 import Control.Monad
 import Control.Monad.State
 import qualified Data.Map as M
+import Codec.Picture.Types
 
-import PNG(readPng)
+import PNG (readPng, readPngImage, calcAvgColor)
 import Types
 import AST
 import Interpreter
@@ -61,4 +62,14 @@ drawPng path = do
   let root = Left $ SimpleBlock (BlockId [0]) (Rectangle 0 0 (width) (height)) white
   let (_, program) = runState (drawByPixels root picture) []
   return $ reverse program
+
+drawPngAvgColor :: FilePath -> IO Program
+drawPngAvgColor path = do
+  img <- readPngImage path
+  let shape = Rectangle 0 0 (imageWidth img) (imageHeight img)
+      root = Left $ SimpleBlock (BlockId [0]) shape white
+      avgColor = calcAvgColor img shape
+      paint = SetColor root avgColor
+      program = [paint]
+  return program
 
