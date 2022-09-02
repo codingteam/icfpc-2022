@@ -12,15 +12,15 @@ import Printer
 
 main :: IO ()
 main = do
---   let root = Left $ SimpleBlock (BlockId [0]) (Rectangle 0 0 400 400) transparent
---   let (pixels, _) = runState (cutToPixels root) []
---   forM_ pixels $ \b ->
---     print (rX (blockShape b), rY (blockShape b))
-    [path] <- getArgs
-    program <- drawPng path
-    putStrLn "Program:"
-    TIO.putStr $ printProgram program
---     (w,h, picture) <- readPng path
---     pixels <- cutToPixels root
---     let blockMap = buildMap pixels
+    [cmd, path] <- getArgs
+    case cmd of
+      "average" -> do
+        program <- drawPngAvgColor path
+        TIO.putStr $ printProgram program
+
+      "bypixel" -> do
+        program <- drawPng path
+        TIO.putStr $ printProgram program
+
+      _ -> fail "unsupported command"
 

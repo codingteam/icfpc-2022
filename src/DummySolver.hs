@@ -4,8 +4,9 @@ module DummySolver where
 import Control.Monad
 import Control.Monad.State
 import qualified Data.Map as M
+import Codec.Picture.Types
 
-import PNG(readPng)
+import PNG (readPng, readPngImage, calcAvgColor)
 import Types
 import AST
 import Interpreter
@@ -55,21 +56,20 @@ drawByPixels root colors = do
     let block = findBlock blockMap point
     putMove (SetColor block color)
 
-readPngAvgPixel :: FilePath -> Shape -> IO Color
-readPngAvgPixel path shape = do
-  pngData <- B.readFile path
-  let Right (ImageRGBA8 img) = decodePng pngData
-      img16 = promoteImage img :: Image PixelRGBA16
-      PixelRGBA16 avgR16 avgG16 avgB16 avgA16 = pixelFold summate 0 img16
-      size = fromIntegral (imageWidth img * imageHeight img) :: Pixel16
-      colorAvg16 = PixelRGBA16 (avgR16 `div` size) (avgG16 `div` size) (avgB16 `div` size) (avgA16 `div` size)
-      demote p = fromIntegral (p `div` 256)
-      colorAvg = PixelRGBA8 (dempte
-
 drawPng :: FilePath -> IO Program
 drawPng path = do
   (width, height, picture) <- readPng path
   let root = Left $ SimpleBlock (BlockId [0]) (Rectangle 0 0 (width) (height)) white
   let (_, program) = runState (drawByPixels root picture) []
   return $ reverse program
+
+drawPngAvgColor :: FilePath -> IO Program
+drawPngAvgColor path = do
+  img <- readPngImage path
+  let shape = Rectangle 0 0 (imageWidth img) (imageHeight img)
+      root = Left $ SimpleBlock (BlockId [0]) shape white
+      avgColor = calcAvgColor img shape
+      paint = SetColor root avgColor
+      program = [paint]
+  return program
 
