@@ -12,8 +12,15 @@ import Printer
 
 main :: IO ()
 main = do
-  [path] <- getArgs
-  program <- drawPng path
-  putStrLn "Program:"
-  TIO.putStr $ printProgram program
+--   let root = Left $ SimpleBlock (BlockId [0]) (Rectangle 0 0 400 400) transparent
+--   let (pixels, _) = runState (cutToPixels root) []
+--   forM_ pixels $ \b ->
+--     print (rX (blockShape b), rY (blockShape b))
+    [path] <- getArgs
+    program <- drawPng path
+    putStrLn "Program:"
+    TIO.putStr $ printProgram program
+--     (w,h, picture) <- readPng path
+--     pixels <- cutToPixels root
+--     let blockMap = buildMap pixels
 

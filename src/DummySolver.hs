@@ -58,7 +58,7 @@ drawByPixels root colors = do
 drawPng :: FilePath -> IO Program
 drawPng path = do
   (width, height, picture) <- readPng path
-  let root = Left $ SimpleBlock (BlockId [0]) (Rectangle 0 0 (width-1) (height-1)) white
+  let root = Left $ SimpleBlock (BlockId [0]) (Rectangle 0 0 (width) (height)) white
   let (_, program) = runState (drawByPixels root picture) []
   return $ reverse program
 

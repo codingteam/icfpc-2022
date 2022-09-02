@@ -79,7 +79,10 @@ blockShape (Left simple) = sShape simple
 blockShape (Right complex) = cShape complex
 
 data Point = Point {pX :: {-# UNPACK #-} ! Coordinate, pY :: {-# UNPACK #-} ! Coordinate}
-  deriving (Eq, Show, Ord)
+  deriving (Eq, Ord)
+
+instance Show Point where
+  show p = "(" ++ show (pX p) ++ ", " ++ show (pY p) ++ ")"
 
 data Orientation = Vertical | Horizontal
   deriving (Eq, Show)
