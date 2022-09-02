@@ -55,6 +55,17 @@ drawByPixels root colors = do
     let block = findBlock blockMap point
     putMove (SetColor block color)
 
+readPngAvgPixel :: FilePath -> Shape -> IO Color
+readPngAvgPixel path shape = do
+  pngData <- B.readFile path
+  let Right (ImageRGBA8 img) = decodePng pngData
+      img16 = promoteImage img :: Image PixelRGBA16
+      PixelRGBA16 avgR16 avgG16 avgB16 avgA16 = pixelFold summate 0 img16
+      size = fromIntegral (imageWidth img * imageHeight img) :: Pixel16
+      colorAvg16 = PixelRGBA16 (avgR16 `div` size) (avgG16 `div` size) (avgB16 `div` size) (avgA16 `div` size)
+      demote p = fromIntegral (p `div` 256)
+      colorAvg = PixelRGBA8 (dempte
+
 drawPng :: FilePath -> IO Program
 drawPng path = do
   (width, height, picture) <- readPng path
