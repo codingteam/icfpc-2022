@@ -1,7 +1,7 @@
 
 module Types (
     BlockId (..), (+.),
-    Color, PixelRGBA8 (..), transparent,
+    Color, PixelRGBA8 (..), transparent, white,
     Coordinate,
     Shape (..),
     SimpleBlock (..),
@@ -30,6 +30,9 @@ type Color = PixelRGBA8
 
 transparent :: Color
 transparent = PixelRGBA8 0 0 0 0
+
+white :: Color
+white = PixelRGBA8 255 255 255 255
 
 type Coordinate = Int
 

@@ -4,6 +4,9 @@ module DummySolver where
 import Control.Monad
 import Control.Monad.State
 import qualified Data.Map as M
+import qualified Data.ByteString as B
+import Codec.Picture.Types
+import Codec.Picture.Png (decodePng)
 
 import Types
 import AST
@@ -48,4 +51,18 @@ drawByPixels root colors = do
   forM_ colors $ \(point, color) -> do
     let block = findBlock pixels point
     putMove (SetColor block color)
-  
+
+readPng :: FilePath -> IO (Coordinate, Coordinate, [(Point, Color)])
+readPng path = do
+  pngData <- B.readFile path
+  let Right (ImageRGBA8 img) = decodePng pngData
+  let pixels = [(Point x y, pixelAt img x y) | x <- [0 .. imageWidth img-1], y <- [0 .. imageHeight img-1]]
+  return (imageWidth img, imageHeight img, pixels)
+
+drawPng :: FilePath -> IO Program
+drawPng path = do
+  (width, height, picture) <- readPng path
+  let root = Left $ SimpleBlock (BlockId [0]) (Rectangle 0 0 (width-1) (height-1)) white
+  let (_, program) = runState (drawByPixels root picture) []
+  return program
+
