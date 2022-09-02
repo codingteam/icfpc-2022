@@ -1,8 +1,20 @@
 
-module Types where
+module Types (
+    BlockId (..),
+    Color, PixelRGBA8 (..),
+    Coordinate,
+    Shape (..),
+    SimpleBlock (..),
+    ComplexBlock (..),
+    ChildBlocks,
+    Block,
+    blockId,
+    Point (..),
+    Orientation (..)
+  ) where
 
 import Data.List (intercalate)
-import Codec.Picture.Types (PixelRGBA8)
+import Codec.Picture.Types (PixelRGBA8 (..))
 
 newtype BlockId = BlockId [Int]
   deriving (Eq)
@@ -34,6 +46,10 @@ data ComplexBlock = ComplexBlock {
 type ChildBlocks = [Block]
 
 type Block = Either SimpleBlock ComplexBlock
+
+blockId :: Block -> BlockId
+blockId (Left simple) = sBlockId simple
+blockId (Right complex) = cBlockId complex
 
 data Point = Point {pX :: Coordinate, pY :: Coordinate}
   deriving (Eq, Show)

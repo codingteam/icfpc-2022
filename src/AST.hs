@@ -3,6 +3,8 @@ module AST where
 
 import Types
 
+type Program = [Move]
+
 data Move =
     PointCut Block Point
   | LineCut Block Orientation Coordinate
