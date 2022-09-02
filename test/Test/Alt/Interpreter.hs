@@ -70,4 +70,17 @@ altInterpreterTests =
 
       let finalImage = isImage final
       (pixelAt finalImage 0 0) @?= black
+
+  , testCase "Can merge two blocks into a single, new one" $ do
+      let p1 = [LineCut rootBlockId Horizontal 200]
+      let intermediate = execState (interpretProgram p1) (initialState (400, 400))
+
+      (M.size $ isBlocks intermediate) @?= 2
+
+      let p2 = [Merge (BlockId [0, 0]) (BlockId [1, 0])]
+      let final = execState (interpretProgram p2) intermediate
+
+      (M.size $ isBlocks final) @?= 1
+      let expectedFinalShape = Rectangle 0 0 400 400
+      ((BlockId [1]) `M.lookup` (isBlocks final)) @?= Just expectedFinalShape
   ]

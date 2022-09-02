@@ -115,7 +115,23 @@ interpretMove (Swap blockId1 blockId2) = modify' $ \is ->
             $ isBlocks is
       in is { isImage = image', isBlocks = blocks' }
     _ -> is
-interpretMove _ = undefined
+interpretMove (Merge blockId1 blockId2) = modify' $ \is ->
+  let blocks = isBlocks is
+  in case (blockId1 `M.lookup` blocks, blockId2 `M.lookup` blocks) of
+    (Just shape1, Just shape2) ->
+      let lastBlockId' = isLastBlockId is + 1
+          newBlockId = BlockId [lastBlockId']
+          newShape =
+            if (rX shape1) == (rX shape2)
+              then Rectangle (rX shape1) (minimum [rY shape1, rY shape2]) (rWidth shape1) (rHeight shape1 + rHeight shape2)
+              else Rectangle (minimum [rX shape1, rX shape2]) (rY shape1) (rWidth shape1 + rWidth shape2) (rHeight shape1)
+          blocks' =
+              M.insert newBlockId newShape
+            $ M.delete blockId1
+            $ M.delete blockId2
+            $ isBlocks is
+      in is { isLastBlockId = lastBlockId', isBlocks = blocks' }
+    _ -> is
 
 copyShape :: Image PixelRGBA8 -> Shape -> MutableImage s PixelRGBA8 -> Shape -> ST s ()
 copyShape srcImage srcShape dstImage dstShape = do
