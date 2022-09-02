@@ -5,7 +5,7 @@ module Alt.Interpreter where
 import Codec.Picture.Types
 import Control.Monad
 import Control.Monad.State
-import Control.Monad.ST (runST)
+import Control.Monad.ST (ST, runST)
 import qualified Data.Map as M
 
 import Alt.AST
@@ -97,4 +97,35 @@ interpretMove (SetColor blockId color) = modify' $ \is ->
 
             freezeImage img
       in  is { isImage = image' }
+interpretMove (Swap blockId1 blockId2) = modify' $ \is ->
+  let blocks = isBlocks is
+  in case (blockId1 `M.lookup` blocks, blockId2 `M.lookup` blocks) of
+    (Just shape1, Just shape2) ->
+      let image = isImage is
+          image' = runST $ do
+            img <- thawImage image
+
+            copyShape image shape1 img shape2
+            copyShape image shape2 img shape1
+
+            freezeImage img
+          blocks' =
+              M.insert blockId1 shape2
+            $ M.insert blockId2 shape1
+            $ isBlocks is
+      in is { isImage = image', isBlocks = blocks' }
+    _ -> is
 interpretMove _ = undefined
+
+copyShape :: Image PixelRGBA8 -> Shape -> MutableImage s PixelRGBA8 -> Shape -> ST s ()
+copyShape srcImage srcShape dstImage dstShape = do
+  -- We have (0, 0) at bottom left, Juicy Pixels has it at top left
+  let h = mutableImageHeight dstImage
+  forM_ [0 .. (rHeight srcShape - 1)] $ \dy -> do
+    let srcY = h - 1 - (rY srcShape + dy)
+    let dstY = h - 1 - (rY dstShape + dy)
+    forM_ [0 .. (rWidth srcShape - 1)] $ \dx -> do
+      let srcX = rX srcShape + dx
+      let dstX = rX dstShape + dx
+      let pixel = pixelAt srcImage srcX srcY
+      writePixel dstImage dstX dstY pixel

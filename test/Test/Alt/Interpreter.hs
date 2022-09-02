@@ -14,6 +14,7 @@ import Types
 altInterpreterTests :: TestTree
 altInterpreterTests =
   let rootBlockId = BlockId [0]
+      black = PixelRGBA8 0 0 0 255
   in testGroup "Alt.Interpreter"
   [
     testCase "Empty program leaves canvas unchanged" $ do
@@ -23,7 +24,6 @@ altInterpreterTests =
       (isBlocks result) @?= initialCanvas
 
   , testCase "Can change the color of the canvas" $ do
-      let black = PixelRGBA8 0 0 0 255
       let p = [SetColor rootBlockId black]
       let result = execState (interpretProgram p) (initialState (400, 400))
 
@@ -53,4 +53,21 @@ altInterpreterTests =
 
       let resultBlocks = isBlocks result
       (M.size resultBlocks) @?= 4
+
+  , testCase "Can swap two areas of the canvas" $ do
+      let p1 =
+            [
+              LineCut rootBlockId Horizontal 200
+            , SetColor (BlockId [0, 0]) black
+            ]
+      let intermediate = execState (interpretProgram p1) (initialState (400, 400))
+
+      let intermediateImage = isImage intermediate
+      (pixelAt intermediateImage 0 0) @?= white
+
+      let p2 = [Swap (BlockId [0, 0]) (BlockId [1, 0])]
+      let final = execState (interpretProgram p2) intermediate
+
+      let finalImage = isImage final
+      (pixelAt finalImage 0 0) @?= black
   ]
