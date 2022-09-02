@@ -3,13 +3,13 @@ module Test.Alt.Interpreter where
 import Test.Tasty
 import Test.Tasty.HUnit
 
+import Codec.Picture.Types (pixelAt)
 import Control.Monad.State (execState)
-import Data.Maybe (fromJust)
 import qualified Data.Map as M
 
-import Alt.Interpreter
 import Alt.AST
-import Alt.Types
+import Alt.Interpreter
+import Types
 
 altInterpreterTests :: TestTree
 altInterpreterTests =
@@ -22,12 +22,15 @@ altInterpreterTests =
       let result = execState (interpretProgram []) state
       (isBlocks result) @?= initialCanvas
 
-  , testCase "Can change the colour of the canvas" $ do
+  , testCase "Can change the color of the canvas" $ do
       let black = PixelRGBA8 0 0 0 255
       let p = [SetColor rootBlockId black]
       let result = execState (interpretProgram p) (initialState (400, 400))
 
-      (bColor $ fromJust $ rootBlockId `M.lookup` (isBlocks result)) @?= black
+      let image = isImage result
+      let corner = pixelAt image 0 0
+
+      corner @?= black
 
   , testCase "Can cut canvas horizontally" $ do
       let p = [LineCut rootBlockId Horizontal 8]

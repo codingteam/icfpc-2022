@@ -1,6 +1,6 @@
 module Alt.AST where
 
-import Alt.Types
+import Types
 
 type Program = [Move]
 
