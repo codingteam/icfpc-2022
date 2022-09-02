@@ -1,6 +1,7 @@
 /.idea/
 /.stack-work/
 /dist-newstyle/
+/out/
 
 /icfpc2022.cabal
 /*.iml
