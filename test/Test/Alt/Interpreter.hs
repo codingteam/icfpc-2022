@@ -42,4 +42,12 @@ altInterpreterTests =
 
       let resultBlocks = isBlocks result
       (M.size resultBlocks) @?= 2
+
+  , testCase "Can cut canvas at a point" $ do
+      let canvasCenter = Point { pX = 200, pY = 200 }
+      let p = [PointCut rootBlockId canvasCenter]
+      let result = execState (interpretProgram p) (initialState (400, 400))
+
+      let resultBlocks = isBlocks result
+      (M.size resultBlocks) @?= 4
   ]
