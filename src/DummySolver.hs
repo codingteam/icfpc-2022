@@ -13,7 +13,7 @@ import Interpreter
 type ProgramM a = State Program a
 
 putMove :: Move -> ProgramM ()
-putMove m = modify $ \p -> p ++ [m]
+putMove m = modify $ \p -> m : p
 
 cutToPixels :: Block -> ProgramM [Block]
 cutToPixels block = do
@@ -38,16 +38,21 @@ cutToPixels block = do
                   else return [block]
 
 -- | This implementation suits for 1x1 blocks only
-findBlock :: [Block] -> Point -> Block
+buildMap :: [Block] -> M.Map Point Block
+buildMap blocks = M.fromList [(Point (rX (blockShape b)) (rY (blockShape b)), b) | b <- blocks]
+
+findBlock :: M.Map Point Block -> Point -> Block
 findBlock blocks point =
-  let arr = M.fromList [((rX (blockShape b), rY (blockShape b)), b) | b <- blocks]
-  in  arr M.! (pX point, pY point)
+  case M.lookup point blocks of
+    Nothing -> error $ "Can't find point: " ++ show point
+    Just block -> block
 
 drawByPixels :: Block -> [(Point, Color)] -> ProgramM ()
 drawByPixels root colors = do
   pixels <- cutToPixels root
+  let blockMap = buildMap pixels
   forM_ colors $ \(point, color) -> do
-    let block = findBlock pixels point
+    let block = findBlock blockMap point
     putMove (SetColor block color)
 
 drawPng :: FilePath -> IO Program
@@ -55,5 +60,5 @@ drawPng path = do
   (width, height, picture) <- readPng path
   let root = Left $ SimpleBlock (BlockId [0]) (Rectangle 0 0 (width-1) (height-1)) white
   let (_, program) = runState (drawByPixels root picture) []
-  return program
+  return $ reverse program
 
