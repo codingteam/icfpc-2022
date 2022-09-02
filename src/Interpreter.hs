@@ -27,8 +27,8 @@ cutPointShape parent (Point x y) =
       dy = y - rY parent
       shape0 = Rectangle (rX parent) (rY parent) dx dy
       shape1 = Rectangle (rX parent + dx) (rY parent) (rWidth parent - dx) dy
-      shape2 = Rectangle (rX parent) (rY parent + dy) dx (rHeight parent - dy)
-      shape3 = Rectangle (rX parent + dx) (rY parent + dy) (rWidth parent - dx) (rHeight parent - dy)
+      shape2 = Rectangle (rX parent + dx) (rY parent + dy) (rWidth parent - dx) (rHeight parent - dy)
+      shape3 = Rectangle (rX parent) (rY parent + dy) dx (rHeight parent - dy)
   in  [shape0, shape1, shape2, shape3]
 
 cutPoint :: Block -> Point -> [Block]
