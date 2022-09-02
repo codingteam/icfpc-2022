@@ -12,7 +12,9 @@ import Alt.AST
 import Alt.Types
 
 altInterpreterTests :: TestTree
-altInterpreterTests = testGroup "Alt.Interpreter"
+altInterpreterTests =
+  let rootBlockId = BlockId [0]
+  in testGroup "Alt.Interpreter"
   [
     testCase "Empty program leaves canvas unchanged" $ do
       let state = initialState (400, 400)
@@ -21,10 +23,23 @@ altInterpreterTests = testGroup "Alt.Interpreter"
       (isBlocks result) @?= initialCanvas
 
   , testCase "Can change the colour of the canvas" $ do
-      let rootBlockId = BlockId [0]
       let black = PixelRGBA8 0 0 0 255
       let p = [SetColor rootBlockId black]
       let result = execState (interpretProgram p) (initialState (400, 400))
 
       (bColor $ fromJust $ rootBlockId `M.lookup` (isBlocks result)) @?= black
+
+  , testCase "Can cut canvas horizontally" $ do
+      let p = [LineCut rootBlockId Horizontal 8]
+      let result = execState (interpretProgram p) (initialState (400, 400))
+
+      let resultBlocks = isBlocks result
+      (M.size resultBlocks) @?= 2
+
+  , testCase "Can cut canvas vertically" $ do
+      let p = [LineCut rootBlockId Vertical 399]
+      let result = execState (interpretProgram p) (initialState (400, 400))
+
+      let resultBlocks = isBlocks result
+      (M.size resultBlocks) @?= 2
   ]

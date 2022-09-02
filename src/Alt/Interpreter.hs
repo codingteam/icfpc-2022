@@ -35,6 +35,34 @@ interpretProgram :: Program -> InterpretM ()
 interpretProgram p = forM_ p interpretMove
 
 interpretMove :: Move -> InterpretM ()
+interpretMove (LineCut blockId Horizontal y) = modify' $ \is ->
+  case blockId `M.lookup` (isBlocks is) of
+    Nothing -> is
+    Just block ->
+      let parent = bShape block
+          dy = y - rY parent
+          top = block { bShape = Rectangle (rX parent) (rY parent + dy) (rWidth parent) (rHeight parent - dy) }
+          bottom = block { bShape = Rectangle (rX parent) (rY parent) (rWidth parent) dy }
+          blocks' =
+              M.insert (blockId +. 0) bottom
+            $ M.insert (blockId +. 1) top
+            $ M.delete blockId
+            $ isBlocks is
+      in is { isBlocks = blocks' }
+interpretMove (LineCut blockId Vertical x) = modify' $ \is ->
+  case blockId `M.lookup` (isBlocks is) of
+    Nothing -> is
+    Just block ->
+      let parent = bShape block
+          dx = x - rX parent
+          left = block { bShape = Rectangle (rX parent) (rY parent) dx (rHeight parent) }
+          right = block { bShape = Rectangle (rX parent + dx) (rY parent) (rWidth parent - dx) (rHeight parent) }
+          blocks' =
+              M.insert (blockId +. 0) left
+            $ M.insert (blockId +. 1) right
+            $ M.delete blockId
+            $ isBlocks is
+      in is { isBlocks = blocks' }
 interpretMove (SetColor blockId color) = modify' $ \is ->
   case blockId `M.lookup` (isBlocks is) of
     Nothing -> is
