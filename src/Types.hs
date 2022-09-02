@@ -35,3 +35,9 @@ type ChildBlocks = [Block]
 
 type Block = Either SimpleBlock ComplexBlock
 
+data Point = Point {pX :: Coordinate, pY :: Coordinate}
+  deriving (Eq, Show)
+
+data Orientation = Vertical | Horizontal
+  deriving (Eq, Show)
+
