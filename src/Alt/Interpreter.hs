@@ -35,4 +35,11 @@ interpretProgram :: Program -> InterpretM ()
 interpretProgram p = forM_ p interpretMove
 
 interpretMove :: Move -> InterpretM ()
-interpretMove = undefined
+interpretMove (SetColor blockId color) = modify' $ \is ->
+  case blockId `M.lookup` (isBlocks is) of
+    Nothing -> is
+    Just block ->
+      let newBlock = block { bColor = color }
+          blocks' = M.insert blockId newBlock (isBlocks is)
+      in is { isBlocks = blocks' }
+interpretMove _ = undefined

@@ -18,7 +18,7 @@ import Codec.Picture.Types (PixelRGBA8 (..))
 import Text.Printf
 
 newtype BlockId = BlockId [Int]
-  deriving (Eq)
+  deriving (Eq, Ord)
 
 (+.) :: BlockId -> Int -> BlockId
 (BlockId ids) +. k = BlockId (k : ids)

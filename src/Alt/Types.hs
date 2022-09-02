@@ -1,6 +1,6 @@
 module Alt.Types (
     BlockId (..), (+.),
-    Color, transparent, white,
+    Color, PixelRGBA8 (..), transparent, white,
     Coordinate,
     Shape (..),
     Block (..),
@@ -10,7 +10,7 @@ module Alt.Types (
 
 import Types (
   BlockId (..), (+.),
-  Color, transparent, white,
+  Color, PixelRGBA8 (..), transparent, white,
   Coordinate,
   Shape (..),
   Point (..),
