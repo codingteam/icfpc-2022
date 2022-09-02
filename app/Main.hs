@@ -9,6 +9,7 @@ import Types
 import AST
 import DummySolver
 import Printer
+import qualified SpiralSolver
 
 main :: IO ()
 main = do
@@ -16,10 +17,17 @@ main = do
 --   let (pixels, _) = runState (cutToPixels root) []
 --   forM_ pixels $ \b ->
 --     print (rX (blockShape b), rY (blockShape b))
-    [path] <- getArgs
-    program <- drawPng path
-    putStrLn "Program:"
-    TIO.putStr $ printProgram program
+  args <- getArgs
+  case args of
+    [path] -> do
+      program <- drawPng path
+      putStrLn "Program:"
+      TIO.putStr $ printProgram program
+    ["spiral", path] -> do
+      program <- SpiralSolver.drawPng path
+      putStrLn "Program:"
+      TIO.putStr $ printProgram program
+    _ -> putStrLn "Usage:\n- <imagePath> - dun rummy solver\n- spiral <imagePath> - run spiral solver"
 --     (w,h, picture) <- readPng path
 --     pixels <- cutToPixels root
 --     let blockMap = buildMap pixels
