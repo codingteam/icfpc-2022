@@ -34,7 +34,7 @@ calcAvgColor img shape =
         | otherwise = acc
       PixelRGBAF sumR sumG sumB sumA = pixelFold summate (PixelRGBAF 0 0 0 0) img
       -- size = 1
-      size = fromIntegral (imageWidth img * imageHeight img) :: Float
+      size = fromIntegral (rWidth shape * rHeight shape) :: Float
       (avgR, avgG, avgB, avgA) = (sumR / size, sumG / size, sumB / size, sumA / size)
       colorAvg = PixelRGBA8 (round avgR) (round avgG) (round avgB) 255
   in colorAvg

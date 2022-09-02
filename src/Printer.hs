@@ -11,7 +11,7 @@ printProgram :: Program -> T.Text
 printProgram p = T.unlines $ map printMove p
 
 printBlockId :: BlockId -> T.Text
-printBlockId (BlockId ids) = T.intercalate "." $ map (T.pack . show) ids
+printBlockId (BlockId ids) = T.intercalate "." $ map (T.pack . show) $ reverse ids
 
 printBlock :: Block -> T.Text
 printBlock b = "[" <> printBlockId (blockId b) <> "]"

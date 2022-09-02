@@ -73,3 +73,16 @@ drawPngAvgColor path = do
       program = [paint]
   return program
 
+drawPngAvgQuadsColor :: FilePath -> IO Program
+drawPngAvgQuadsColor path = do
+  img <- readPngImage path
+  let rootShape = Rectangle 0 0 (imageWidth img) (imageHeight img)
+      root = Left $ SimpleBlock (BlockId [0]) rootShape white
+      middleX = rX rootShape + (rWidth rootShape `div` 2)
+      middleY = rY rootShape + (rHeight rootShape `div` 2)
+      center = Point middleX middleY
+      quads = cutPoint root center
+      cut = PointCut root center
+      paints = [SetColor quad (calcAvgColor img (blockShape quad)) | quad <- quads]
+  return $ cut : paints
+
