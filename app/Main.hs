@@ -1,6 +1,13 @@
 module Main where
 
-import Solver
+import Control.Monad
+
+import Types
+import AST
+import DummySolver
 
 main :: IO ()
-main = putStrLn $ "The answer is " ++ (show getAnswer)
+main = do
+  let root = Left $ SimpleBlock (BlockId [0]) (Rectangle 0 0 3 3) transparent
+      pixels = cutToPixels root
+  forM_ pixels print
