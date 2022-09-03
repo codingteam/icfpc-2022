@@ -67,7 +67,7 @@ interpretMove (PointCut bId (Point x y)) = modify' $ \is ->
             $ HMS.delete bId
             $ isBlocks is
           cost = calculateMoveCost (isImage is) 10 parent
-      in blocks' `deepseq` cost `deepseq` is { isBlocks = blocks', isCost = cost + isCost is }
+      in cost `deepseq` is { isBlocks = blocks', isCost = cost + isCost is }
 interpretMove (LineCut bId Horizontal y) = modify' $ \is ->
   case bId `HMS.lookup` (isBlocks is) of
     Nothing -> is
@@ -81,7 +81,7 @@ interpretMove (LineCut bId Horizontal y) = modify' $ \is ->
             $ HMS.delete bId
             $ isBlocks is
           cost = calculateMoveCost (isImage is) 7 parent
-      in blocks' `deepseq` cost `deepseq` is { isBlocks = blocks', isCost = cost + isCost is }
+      in cost `deepseq` is { isBlocks = blocks', isCost = cost + isCost is }
 interpretMove (LineCut bId Vertical x) = modify' $ \is ->
   case bId `HMS.lookup` (isBlocks is) of
     Nothing -> is
@@ -95,7 +95,7 @@ interpretMove (LineCut bId Vertical x) = modify' $ \is ->
             $ HMS.delete bId
             $ isBlocks is
           cost = calculateMoveCost (isImage is) 7 parent
-      in blocks' `deepseq` cost `deepseq` is { isBlocks = blocks', isCost = cost + isCost is }
+      in cost `deepseq` is { isBlocks = blocks', isCost = cost + isCost is }
 interpretMove (SetColor bId color) = modify' $ \is ->
   case bId `HMS.lookup` (isBlocks is) of
     Nothing -> is
@@ -130,7 +130,7 @@ interpretMove (Swap bId1 bId2) = modify' $ \is ->
             $ HMS.insert bId2 shape1
             $ isBlocks is
           cost = calculateMoveCost (isImage is) 3 shape1
-      in image' `deepseq` blocks' `deepseq` cost `deepseq` is { isImage = image', isBlocks = blocks', isCost = cost + isCost is }
+      in image' `deepseq` cost `deepseq` is { isImage = image', isBlocks = blocks', isCost = cost + isCost is }
     _ -> is
 interpretMove (Merge bId1 bId2) = modify' $ \is ->
   let blocks = isBlocks is
@@ -154,7 +154,7 @@ interpretMove (Merge bId1 bId2) = modify' $ \is ->
             if shapeArea shape1 > shapeArea shape2
               then calculateMoveCost (isImage is) 1 shape1
               else calculateMoveCost (isImage is) 1 shape2
-      in blocks' `deepseq` cost `deepseq` is { isLastBlockId = lastBlockId', isBlocks = blocks', isCost = cost + isCost is }
+      in cost `deepseq` is { isLastBlockId = lastBlockId', isBlocks = blocks', isCost = cost + isCost is }
     _ -> is
 
 copyShape :: Image PixelRGBA8 -> Shape -> MutableImage s PixelRGBA8 -> Shape -> ST s ()
