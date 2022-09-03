@@ -115,7 +115,7 @@ do
     fi
 
     echo '\tbillboard solver'
-    for tolerance in `seq 0 50`
+    for tolerance in `seq 0 5`
     do
         billboard_isl=$(mktemp -p "$tmp")
         stack run -- billboard "$problem" "$tolerance" > "$billboard_isl"
