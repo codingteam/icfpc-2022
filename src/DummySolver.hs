@@ -38,6 +38,16 @@ cutToPixels block = do
                        concat <$> mapM cutToPixels children
                   else return [block]
 
+cutToQuads :: Int -> Block -> ProgramM [Block]
+cutToQuads 0 block = return [block]
+cutToQuads level block = do
+  let shape = blockShape block
+      middleX = rX shape + (rWidth shape `div` 2)
+      middleY = rY shape + (rHeight shape `div` 2)
+      children = cutPoint block (Point middleX middleY)
+  putMove $ PointCut block (Point middleX middleY)
+  concat <$> mapM (cutToQuads (level-1)) children
+
 -- | This implementation suits for 1x1 blocks only
 buildMap :: [Block] -> M.Map Point Block
 buildMap blocks = M.fromList [(Point (rX (blockShape b)) (rY (blockShape b)), b) | b <- blocks]
@@ -85,4 +95,13 @@ drawPngAvgQuadsColor path = do
       cut = PointCut root center
       paints = [SetColor quad (calcAvgColor img (blockShape quad)) | quad <- quads]
   return $ cut : paints
+
+drawPngAverageQuads :: FilePath -> Int -> IO Program
+drawPngAverageQuads path levels = do
+  img <- readPngImage path
+  let rootShape = Rectangle 0 0 (imageWidth img) (imageHeight img)
+      root = Left $ SimpleBlock (BlockId [0]) rootShape white
+      (quads, cuts) = runState (cutToQuads levels root) []
+      paints = [SetColor quad (calcAvgColor img (blockShape quad)) | quad <- quads]
+  return $ reverse cuts ++ paints
 

@@ -31,5 +31,10 @@ main = do
         program <- drawPngAvgQuadsColor path
         TIO.putStr $ printProgram program
 
+    ["quads", ls, path] -> do
+        let level = read ls
+        program <- drawPngAverageQuads path level
+        TIO.putStr $ printProgram program
+
     _ -> putStrLn "Usage:\n- <imagePath> - dun rummy solver\n- spiral <imagePath> - run spiral solver"
 
