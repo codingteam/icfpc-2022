@@ -5,16 +5,17 @@ import Codec.Picture.Png (writePng)
 import System.Environment
 import qualified Data.Text.IO as TIO
 
+import Alt.DummySolver
 import DummySolver
+import Json (parseConfig)
 import PNG
 import Printer
 import qualified Alt.Evaluator as AltEvaluator
-import qualified Alt.Reader as AltReader
-import qualified Alt.Printer
 import qualified Alt.Interpreter as AltInterpreter
+import qualified Alt.Printer
+import qualified Alt.Reader as AltReader
+import qualified Alt.Solver.Billboard
 import qualified SpiralSolver
-import Json (parseConfig)
-import Alt.DummySolver
 
 main :: IO ()
 main = do
@@ -60,6 +61,11 @@ main = do
 
     ["mergeFromInitial", cfgPath, imgPath] -> do
         program <- paintWithAvgColorsMerged cfgPath imgPath
+        TIO.putStr $ Alt.Printer.printProgram program
+
+    ["billboard", path] -> do
+        image <- readPngImage path
+        let program = Alt.Solver.Billboard.solve image
         TIO.putStr $ Alt.Printer.printProgram program
 
     ["evaluateSolution", imagePath, solutionPath] -> do

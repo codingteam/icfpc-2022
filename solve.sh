@@ -113,4 +113,14 @@ do
         cp -vf $recursive_isl $existing_isl
         best_cost=$recursive_cost
     fi
+
+    billboard_isl=$(mktemp -p "$tmp")
+    stack run -- billboard "$problem" > "$billboard_isl"
+    billboard_cost=$(get_solution_cost $problem $billboard_isl)
+    echo "\tbillboard solver:\t$billboard_cost"
+    if [ $billboard_cost -lt $best_cost ]
+    then
+        cp -vf $billboard_isl $existing_isl
+        best_cost=$billboard_cost
+    fi
 done
