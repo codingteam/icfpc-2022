@@ -8,6 +8,7 @@ import Data.Aeson
 import Data.Aeson.Types
 import qualified Data.Text as T
 import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed as VU
 
 import Types
 
@@ -27,8 +28,8 @@ data BlockJson = BlockJson {
   deriving (Show)
 
 instance FromJSON BlockId where
-  parseJSON (String s) = 
-    return $ BlockId $ reverse $ map (read . T.unpack) $ T.splitOn "." s
+  parseJSON (String s) =
+    return $ BlockId $ VU.fromList $ map (read . T.unpack) $ T.splitOn "." s
   parseJSON invalid = typeMismatch "BlockId" invalid
 
 instance FromJSON Point where
