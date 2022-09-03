@@ -5,7 +5,7 @@ import Test.Tasty.HUnit
 
 import Codec.Picture.Types (pixelAt)
 import Control.Monad.State (execState)
-import qualified Data.Map as M
+import qualified Data.HashMap.Strict as HMS
 
 import Alt.AST
 import Alt.Interpreter
@@ -41,7 +41,7 @@ altInterpreterTests =
       let result = execState (interpretProgram p) (initialState (400, 400))
 
       let resultBlocks = isBlocks result
-      (M.size resultBlocks) @?= 2
+      (HMS.size resultBlocks) @?= 2
 
       (isCost result) @?= 7
 
@@ -50,7 +50,7 @@ altInterpreterTests =
       let result = execState (interpretProgram p) (initialState (400, 400))
 
       let resultBlocks = isBlocks result
-      (M.size resultBlocks) @?= 2
+      (HMS.size resultBlocks) @?= 2
 
       (isCost result) @?= 7
 
@@ -60,7 +60,7 @@ altInterpreterTests =
       let result = execState (interpretProgram p) (initialState (400, 400))
 
       let resultBlocks = isBlocks result
-      (M.size resultBlocks) @?= 4
+      (HMS.size resultBlocks) @?= 4
 
       (isCost result) @?= 10
 
@@ -89,15 +89,15 @@ altInterpreterTests =
       let p1 = [LineCut rootBlockId Horizontal 100]
       let intermediate = execState (interpretProgram p1) (initialState (400, 400))
 
-      (M.size $ isBlocks intermediate) @?= 2
+      (HMS.size $ isBlocks intermediate) @?= 2
       let intermediateCost = isCost intermediate
 
       let p2 = [Merge (BlockId [0, 0]) (BlockId [1, 0])]
       let final = execState (interpretProgram p2) intermediate
 
-      (M.size $ isBlocks final) @?= 1
+      (HMS.size $ isBlocks final) @?= 1
       let expectedFinalShape = Rectangle 0 0 400 400
-      ((BlockId [1]) `M.lookup` (isBlocks final)) @?= Just expectedFinalShape
+      ((BlockId [1]) `HMS.lookup` (isBlocks final)) @?= Just expectedFinalShape
 
       -- Announcement from 02/09/2022, 21:35:00:
       -- When two blocks are merged, the cost is calculated by picking the

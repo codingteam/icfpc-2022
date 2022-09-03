@@ -16,6 +16,7 @@ module Types (
 
 import Codec.Picture.Types (PixelRGBA8 (..))
 import Control.DeepSeq
+import Data.Hashable
 import Data.List (intercalate)
 import GHC.Generics (Generic)
 import Text.Printf
@@ -30,6 +31,7 @@ instance Show BlockId where
   show (BlockId ids) = intercalate "." $ map show $ reverse ids
 
 instance NFData BlockId
+instance Hashable BlockId
 
 type Color = PixelRGBA8
 
