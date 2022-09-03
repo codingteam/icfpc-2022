@@ -65,3 +65,11 @@ parseConfig path = do
     Left err -> fail err
     Right cfg -> return cfg
 
+containsPoint :: BlockJson -> Point -> Bool
+containsPoint block (Point x y) =
+  (x >= pX (bjBottomLeft block)) && (x <= pX (bjTopRight block)) &&
+    (y >= pY (bjBottomLeft block)) && (y <= pY (bjBottomLeft block))
+
+getColorAt :: Configuration -> Point -> Color
+getColorAt cfg point = bjColor $ head $ filter (`containsPoint` point) (cBlocks cfg)
+
