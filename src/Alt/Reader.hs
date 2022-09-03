@@ -37,7 +37,7 @@ readBlockId bId =
   let Just ('[', rest) = T.uncons bId
       Just (rest', ']') = T.unsnoc rest
       numbers = T.splitOn "." rest'
-      numbers' = map readNumber numbers
+      numbers' = map parseNumber numbers
   in BlockId (reverse numbers')
 
 readPoint :: T.Text -> Point
@@ -45,24 +45,35 @@ readPoint point =
   let Just ('[', rest) = T.uncons point
       Just (rest', ']') = T.unsnoc rest
       [textX, textY] = T.splitOn "," rest'
-      x = readNumber textX
-      y = readNumber textY
+      x = parseNumber textX
+      y = parseNumber textY
   in Point { pX = x, pY = y }
 
 readOrientation :: T.Text -> Orientation
-readOrientation "x" = Vertical
-readOrientation "X" = Vertical
-readOrientation "y" = Horizontal
-readOrientation "Y" = Horizontal
-readOrientation orientation = error $ "Could not parse orientation: " ++ (T.unpack orientation)
+readOrientation orientation =
+  let Just ('[', rest) = T.uncons orientation
+      Just (rest', ']') = T.unsnoc rest
+  in helper rest'
+  where
+  helper "x" = Vertical
+  helper "X" = Vertical
+  helper "y" = Horizontal
+  helper "Y" = Horizontal
+  helper o = error $ "Could not parse orientation: " ++ (T.unpack o)
 
 readNumber :: T.Text -> Int
-readNumber = read . T.unpack
+readNumber number =
+  let Just ('[', rest) = T.uncons number
+      Just (rest', ']') = T.unsnoc rest
+  in parseNumber rest'
+
+parseNumber :: T.Text -> Int
+parseNumber = read . T.unpack
 
 readColor :: T.Text -> Color
 readColor color =
   let Just ('[', rest) = T.uncons color
       Just (rest', ']') = T.unsnoc rest
       channels = T.splitOn "," rest'
-      [r, g, b, a] = map (fromIntegral . readNumber) channels
+      [r, g, b, a] = map (fromIntegral . parseNumber) channels
   in PixelRGBA8 r g b a
