@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeFamilies #-}
+
 module PNG where
 
 import qualified Data.ByteString as B
@@ -26,6 +28,9 @@ data PixelRGBAF = PixelRGBAF Float Float Float Float
 pixelPlus :: PixelRGBAF -> PixelRGBA8 -> PixelRGBAF
 pixelPlus (PixelRGBAF r1 g1 b1 a1) (PixelRGBA8 r2 g2 b2 a2) =
   PixelRGBAF (r1 + fromIntegral r2) (g1 + fromIntegral g2) (b1 + fromIntegral b2) (a1 + fromIntegral a2)
+
+pixelToFloat :: PixelRGBA8 -> PixelRGBAF
+pixelToFloat (PixelRGBA8 r g b a) = PixelRGBAF (fromIntegral r) (fromIntegral g) (fromIntegral b) (fromIntegral a)
 
 calcAvgColor :: Image PixelRGBA8 -> Shape -> Color
 calcAvgColor img shape =
