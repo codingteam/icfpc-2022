@@ -10,8 +10,10 @@ import PNG
 import Printer
 import qualified Alt.Evaluator as AltEvaluator
 import qualified Alt.Reader as AltReader
+import qualified Alt.Printer
 import qualified SpiralSolver
 import Json (parseConfig)
+import Alt.DummySolver
 
 main :: IO ()
 main = do
@@ -50,6 +52,10 @@ main = do
     ["recursive", path] -> do
         program <- solveRecursive path
         TIO.putStr $ printProgram program
+
+    ["dumbFromInitial", cfgPath, imgPath] -> do
+        program <- paintWithAvgColors cfgPath imgPath
+        TIO.putStr $ Alt.Printer.printProgram program
 
     ["evaluateSolution", imagePath, solutionPath] -> do
       evaluateSolution imagePath solutionPath Nothing
