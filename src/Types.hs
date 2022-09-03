@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 
 module Types (
     BlockId (..), (+.),
@@ -13,18 +14,22 @@ module Types (
     Orientation (..)
   ) where
 
-import Data.List (intercalate)
 import Codec.Picture.Types (PixelRGBA8 (..))
+import Control.DeepSeq
+import Data.List (intercalate)
+import GHC.Generics (Generic)
 import Text.Printf
 
 newtype BlockId = BlockId [Int]
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Generic)
 
 (+.) :: BlockId -> Int -> BlockId
 (BlockId ids) +. k = BlockId (k : ids)
 
 instance Show BlockId where
   show (BlockId ids) = intercalate "." $ map show $ reverse ids
+
+instance NFData BlockId
 
 type Color = PixelRGBA8
 
@@ -41,10 +46,12 @@ data Shape = Rectangle {
             , rY :: {-# UNPACK #-} !Coordinate
             , rWidth :: {-# UNPACK #-} !Coordinate
             , rHeight :: {-# UNPACK #-} !Coordinate}
-  deriving (Eq)
+  deriving (Eq, Generic)
 
 instance Show Shape where
   show r = printf "[(%d,%d), size (%d,%d)]" (rX r) (rY r) (rWidth r) (rHeight r)
+
+instance NFData Shape
 
 shapeArea :: Shape -> Integer
 shapeArea shape = (fromIntegral $ rWidth shape) * (fromIntegral $ rHeight shape)

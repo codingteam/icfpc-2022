@@ -36,6 +36,7 @@ dependencies:
 - vector
 - JuicyPixels
 - JuicyPixels-extra
+- deepseq
 
 ghc-options:
 - -Wall

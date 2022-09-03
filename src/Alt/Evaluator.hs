@@ -1,6 +1,7 @@
 module Alt.Evaluator where
 
 import Codec.Picture.Types (Image (..))
+import Control.DeepSeq (deepseq)
 import Control.Monad.State (execState)
 
 import Alt.AST
@@ -10,7 +11,7 @@ import Types
 
 data EvaluationResult = EvaluationResult {
     erImage :: Image PixelRGBA8
-  , erCost :: Int
+  , erCost :: !Int
   }
 
 evaluateProgram :: Image PixelRGBA8 -> Program -> EvaluationResult
@@ -20,7 +21,7 @@ evaluateProgram image program =
 
       finalImage = isImage finish
       totalCost = (isCost finish) + (imageSimilarity image finalImage)
-  in EvaluationResult {
+  in finalImage `deepseq` totalCost `deepseq` EvaluationResult {
         erImage = finalImage
       , erCost = totalCost
       }

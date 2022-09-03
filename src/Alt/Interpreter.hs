@@ -3,6 +3,7 @@
 module Alt.Interpreter where
 
 import Codec.Picture.Types
+import Control.DeepSeq (deepseq, force)
 import Control.Monad
 import Control.Monad.ST (ST, runST)
 import Control.Monad.State
@@ -13,10 +14,10 @@ import Types
 import Util
 
 data InterpreterState = InterpreterState {
-    isLastBlockId :: Int
+    isLastBlockId :: !Int
   , isBlocks :: M.Map BlockId Shape
   , isImage :: Image PixelRGBA8
-  , isCost :: Int
+  , isCost :: !Int
   }
 
 type InterpretM a = State InterpreterState a
@@ -28,7 +29,7 @@ initialState (width, height) =
       image = runST $ do
         img <- createMutableImage width height whitePixel
         freezeImage img
-  in  InterpreterState {
+  in  image `deepseq` InterpreterState {
         isLastBlockId = 0
       , isBlocks = M.singleton (BlockId [0]) (Rectangle 0 0 width height)
       , isImage = image
@@ -58,7 +59,7 @@ interpretMove (PointCut bId (Point x y)) = modify' $ \is ->
             $ M.delete bId
             $ isBlocks is
           cost = calculateMoveCost (isImage is) 10 parent
-      in is { isBlocks = blocks', isCost = cost + isCost is }
+      in blocks' `deepseq` cost `deepseq` is { isBlocks = blocks', isCost = cost + isCost is }
 interpretMove (LineCut bId Horizontal y) = modify' $ \is ->
   case bId `M.lookup` (isBlocks is) of
     Nothing -> is
@@ -72,7 +73,7 @@ interpretMove (LineCut bId Horizontal y) = modify' $ \is ->
             $ M.delete bId
             $ isBlocks is
           cost = calculateMoveCost (isImage is) 7 parent
-      in is { isBlocks = blocks', isCost = cost + isCost is }
+      in blocks' `deepseq` cost `deepseq` is { isBlocks = blocks', isCost = cost + isCost is }
 interpretMove (LineCut bId Vertical x) = modify' $ \is ->
   case bId `M.lookup` (isBlocks is) of
     Nothing -> is
@@ -86,7 +87,7 @@ interpretMove (LineCut bId Vertical x) = modify' $ \is ->
             $ M.delete bId
             $ isBlocks is
           cost = calculateMoveCost (isImage is) 7 parent
-      in is { isBlocks = blocks', isCost = cost + isCost is }
+      in blocks' `deepseq` cost `deepseq` is { isBlocks = blocks', isCost = cost + isCost is }
 interpretMove (SetColor bId color) = modify' $ \is ->
   case bId `M.lookup` (isBlocks is) of
     Nothing -> is
@@ -103,7 +104,7 @@ interpretMove (SetColor bId color) = modify' $ \is ->
 
             freezeImage img
           cost = calculateMoveCost image 5 shape
-      in  is { isImage = image', isCost = cost + isCost is }
+      in image' `deepseq` cost `deepseq` is { isImage = image', isCost = cost + isCost is }
 interpretMove (Swap bId1 bId2) = modify' $ \is ->
   let blocks = isBlocks is
   in case (bId1 `M.lookup` blocks, bId2 `M.lookup` blocks) of
@@ -121,7 +122,7 @@ interpretMove (Swap bId1 bId2) = modify' $ \is ->
             $ M.insert bId2 shape1
             $ isBlocks is
           cost = calculateMoveCost (isImage is) 3 shape1
-      in is { isImage = image', isBlocks = blocks', isCost = cost + isCost is }
+      in image' `deepseq` blocks' `deepseq` cost `deepseq` is { isImage = image', isBlocks = blocks', isCost = cost + isCost is }
     _ -> is
 interpretMove (Merge bId1 bId2) = modify' $ \is ->
   let blocks = isBlocks is
@@ -145,7 +146,7 @@ interpretMove (Merge bId1 bId2) = modify' $ \is ->
             if shapeArea shape1 > shapeArea shape2
               then calculateMoveCost (isImage is) 1 shape1
               else calculateMoveCost (isImage is) 1 shape2
-      in is { isLastBlockId = lastBlockId', isBlocks = blocks', isCost = cost + isCost is }
+      in blocks' `deepseq` cost `deepseq` is { isLastBlockId = lastBlockId', isBlocks = blocks', isCost = cost + isCost is }
     _ -> is
 
 copyShape :: Image PixelRGBA8 -> Shape -> MutableImage s PixelRGBA8 -> Shape -> ST s ()
@@ -167,4 +168,4 @@ calculateMoveCost image baseCost shape =
       lhs = baseCost * canvasArea
       rhs = shapeArea shape
       fraction = (fromIntegral lhs :: Double) / (fromIntegral rhs)
-  in jsRound fraction
+  in force $ jsRound fraction
