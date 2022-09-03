@@ -12,6 +12,7 @@ import qualified Data.HashMap.Strict as HMS
 import Alt.AST
 import Types
 import Util
+import Json (Configuration (..), getBlocks)
 
 data InterpreterState = InterpreterState {
     isLastBlockId :: !Int
@@ -22,19 +23,25 @@ data InterpreterState = InterpreterState {
 
 type InterpretM a = State InterpreterState a
 
--- | Given canvas dimensions, create the initial state.
-initialState :: (Coordinate, Coordinate) -> InterpreterState
-initialState (width, height) =
+initialState' :: (Coordinate, Coordinate) -> [(BlockId, Shape)] -> InterpreterState
+initialState' (width, height) blocks =
   let whitePixel = PixelRGBA8 255 255 255 255
       image = runST $ do
         img <- createMutableImage width height whitePixel
         freezeImage img
   in  image `deepseq` InterpreterState {
         isLastBlockId = 0
-      , isBlocks = HMS.singleton (createBlockId 0) (Rectangle 0 0 width height)
+      , isBlocks = HMS.fromList blocks
       , isImage = image
       , isCost = 0
       }
+
+-- | Given canvas dimensions, create the initial state.
+initialState :: (Coordinate, Coordinate) -> InterpreterState
+initialState size@(width,height) = initialState' size [(createBlockId 0, Rectangle 0 0 width height)]
+
+initialStateFromJson :: Configuration -> InterpreterState
+initialStateFromJson cfg = initialState' (cWidth cfg, cHeight cfg) (getBlocks cfg)
 
 interpretProgram :: Program -> InterpretM ()
 interpretProgram p = forM_ p interpretMove

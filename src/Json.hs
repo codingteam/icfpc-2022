@@ -74,3 +74,11 @@ containsPoint block (Point x y) =
 getColorAt :: Configuration -> Point -> Color
 getColorAt cfg point = bjColor $ head $ filter (`containsPoint` point) (cBlocks cfg)
 
+getBlocks :: Configuration -> [(BlockId, Shape)]
+getBlocks cfg = map parse (cBlocks cfg)
+  where
+    parse block = (bjId block, shape block)
+    shape block = Rectangle (pX $ bjBottomLeft block) (pY $ bjBottomLeft block)
+                      (pX (bjTopRight block) - pX (bjBottomLeft block) + 1)
+                      (pY (bjTopRight block) - pY (bjTopRight block) + 1)
+
