@@ -13,7 +13,7 @@ readPng :: FilePath -> IO (Coordinate, Coordinate, [(Point, Color)])
 readPng path = do
   pngData <- B.readFile path
   let Right (ImageRGBA8 img) = decodePng pngData
-  let pixels = [(Point x y, pixelAt img x y) | x <- [0 .. imageWidth img-1], y <- [0 .. imageHeight img-1]]
+  let pixels = [(Point x y, pixelAt img x (imageHeight img - y)) | x <- [0 .. imageWidth img-1], y <- [0 .. imageHeight img-1]]
   return (imageWidth img, imageHeight img, pixels)
 
 readPngImage :: FilePath -> IO (Image PixelRGBA8)
@@ -34,9 +34,11 @@ pixelToFloat (PixelRGBA8 r g b a) = PixelRGBAF (fromIntegral r) (fromIntegral g)
 
 calcAvgColor :: Image PixelRGBA8 -> Shape -> Color
 calcAvgColor img shape =
-  let summate acc x y pixel
-        | x >= rX shape && x < (rX shape + rWidth shape) && y >= rY shape && y < (rY shape + rHeight shape) = pixelPlus acc pixel
-        | otherwise = acc
+  let summate acc x y pixel =
+        let y' = imageHeight img - y
+        in  if x >= rX shape && x < (rX shape + rWidth shape) && y' >= rY shape && y' < (rY shape + rHeight shape)
+              then pixelPlus acc pixel
+              else acc
       PixelRGBAF sumR sumG sumB sumA = pixelFold summate (PixelRGBAF 0 0 0 0) img
       -- size = 1
       size = fromIntegral (rWidth shape * rHeight shape) :: Float
