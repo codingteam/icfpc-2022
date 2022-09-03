@@ -11,6 +11,7 @@ import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as VU
 
 import Types
+import PNG
 
 data Configuration = Configuration {
       cWidth :: Coordinate
@@ -72,7 +73,21 @@ containsPoint block (Point x y) =
     (y >= pY (bjBottomLeft block)) && (y <= pY (bjBottomLeft block))
 
 getColorAt :: Configuration -> Point -> Color
-getColorAt cfg point = bjColor $ head $ filter (`containsPoint` point) (cBlocks cfg)
+getColorAt cfg point =
+  let goodBlocks = filter (`containsPoint` point) (cBlocks cfg)
+  in  if null goodBlocks
+        then error $ "Can't find point in configuration: " ++ show point
+        else bjColor $ head goodBlocks 
+
+calcAvgColorFromConfig :: Configuration -> Shape -> Color
+calcAvgColorFromConfig cfg shape =
+  let points = [Point x y | x <- [rX shape .. rX shape + rWidth shape-1], y <- [rY shape .. rY shape + rHeight shape-1]]
+      colors = map (getColorAt cfg) points
+      PixelRGBAF sumR sumG sumB sumA = foldr (flip pixelPlus) (PixelRGBAF 0 0 0 0) colors
+      size = fromIntegral (rWidth shape * rHeight shape) :: Float
+      (avgR, avgG, avgB, avgA) = (sumR / size, sumG / size, sumB / size, sumA / size)
+      colorAvg = PixelRGBA8 (round avgR) (round avgG) (round avgB) (round avgA)
+  in colorAvg
 
 getBlocks :: Configuration -> [(BlockId, Shape)]
 getBlocks cfg = map parse (cBlocks cfg)

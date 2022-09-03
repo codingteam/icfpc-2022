@@ -3,6 +3,7 @@ module Alt.DummySolver where
 
 import Control.Monad
 import Control.Monad.State
+import Data.Maybe (mapMaybe)
 
 import Codec.Picture.Types
 
@@ -20,7 +21,11 @@ paintWithAvgColors :: FilePath -> FilePath -> IO Program
 paintWithAvgColors cfgPath imgPath = do
   img <- readPngImage imgPath
   cfg <- parseConfig cfgPath
-  let blocksCfg = getBlocks cfg
-      paint (blockId, shape) = SetColor blockId (calcAvgColor img shape)
-  return $ map paint blocksCfg
+  let blocksCfg = getColoredBlocks cfg
+      paint (blockId, shape, existingColor) =
+        let avgColor = calcAvgColor img shape
+        in  if avgColor == existingColor
+              then Nothing
+              else Just $ SetColor blockId avgColor
+  return $ mapMaybe paint blocksCfg
 
