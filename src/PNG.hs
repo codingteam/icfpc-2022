@@ -13,7 +13,7 @@ readPng :: FilePath -> IO (Coordinate, Coordinate, [(Point, Color)])
 readPng path = do
   pngData <- B.readFile path
   let Right (ImageRGBA8 img) = decodePng pngData
-  let pixels = [(Point x y, pixelAt img x (imageHeight img - y)) | x <- [0 .. imageWidth img-1], y <- [0 .. imageHeight img-1]]
+  let pixels = [(Point x y, pixelAt img x (imageHeight img - y - 1)) | x <- [0 .. imageWidth img-1], y <- [0 .. imageHeight img-1]]
   return (imageWidth img, imageHeight img, pixels)
 
 readPngImage :: FilePath -> IO (Image PixelRGBA8)
