@@ -6,6 +6,7 @@ import qualified Data.Vector as V
 import Codec.Picture.Types
 
 import Types
+import Util
 
 type Cost = Int
 
@@ -45,7 +46,7 @@ imageSimilarity img1 img2 =
       pixelDistances = V.map (sqrt . V.sum . V.map sqr) diff
       sumDistance = V.sum pixelDistances
       alpha = 0.005
-  in  round $ alpha * sumDistance
+  in  jsRound $ alpha * sumDistance
 
 imagePartDeviation :: Image PixelRGBA8 -> Color -> Double
 imagePartDeviation img (PixelRGBA8 tR tG tB tA) =

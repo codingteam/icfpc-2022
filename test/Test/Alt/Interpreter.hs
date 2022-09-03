@@ -10,6 +10,7 @@ import qualified Data.Map as M
 import Alt.AST
 import Alt.Interpreter
 import Types
+import Util
 
 altInterpreterTests :: TestTree
 altInterpreterTests =
@@ -81,7 +82,7 @@ altInterpreterTests =
       let finalImage = isImage final
       (pixelAt finalImage 0 0) @?= black
 
-      let expectedSwapCost = round ((3 * (400 * 400)) / (400 * 200) :: Double)
+      let expectedSwapCost = jsRound ((3 * (400 * 400)) / (400 * 200) :: Double)
       (isCost final - intermediateCost) @?= expectedSwapCost
 
   , testCase "Can merge two blocks into a single, new one" $ do
@@ -101,6 +102,6 @@ altInterpreterTests =
       -- Announcement from 02/09/2022, 21:35:00:
       -- When two blocks are merged, the cost is calculated by picking the
       -- larger block for computation.
-      let expectedMergeCost = round ((1 * (400 * 400)) / (400 * 300) :: Double)
+      let expectedMergeCost = jsRound ((1 * (400 * 400)) / (400 * 300) :: Double)
       (isCost final - intermediateCost) @?= expectedMergeCost
   ]

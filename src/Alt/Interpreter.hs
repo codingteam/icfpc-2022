@@ -10,6 +10,7 @@ import qualified Data.Map as M
 
 import Alt.AST
 import Types
+import Util
 
 data InterpreterState = InterpreterState {
     isLastBlockId :: Int
@@ -166,4 +167,4 @@ calculateMoveCost image baseCost shape =
       lhs = baseCost * canvasArea
       rhs = shapeArea shape
       fraction = (fromIntegral lhs :: Double) / (fromIntegral rhs)
-  in round fraction
+  in jsRound fraction
