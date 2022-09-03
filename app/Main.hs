@@ -11,6 +11,7 @@ import Printer
 import qualified Alt.Evaluator as AltEvaluator
 import qualified Alt.Reader as AltReader
 import qualified SpiralSolver
+import Json (parseConfig)
 
 main :: IO ()
 main = do
@@ -55,6 +56,10 @@ main = do
 
     ["evaluateSolution", imagePath, solutionPath, imageComparisonPath] -> do
       evaluateSolution imagePath solutionPath (Just imageComparisonPath)
+
+    ["parseConfig", path] -> do
+      cfg <- parseConfig path
+      print cfg
 
     _ -> putStrLn $ unlines [
               "Usage:"
