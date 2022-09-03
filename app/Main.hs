@@ -1,7 +1,9 @@
 module Main where
 
-import qualified Data.Text.IO as TIO
+import Codec.Picture.Extra (beside)
+import Codec.Picture.Png (writePng)
 import System.Environment
+import qualified Data.Text.IO as TIO
 
 import DummySolver
 import PNG
@@ -40,15 +42,27 @@ main = do
         TIO.putStr $ printProgram program
 
     ["evaluateSolution", imagePath, solutionPath] -> do
-        image <- readPngImage imagePath
-        program <- AltReader.readProgramFromFile solutionPath
-        let result = AltEvaluator.evaluateProgram image program
-        putStrLn $ concat ["The cost of this solution is ", show (AltEvaluator.erCost result)]
+      evaluateSolution imagePath solutionPath Nothing
+
+    ["evaluateSolution", imagePath, solutionPath, imageComparisonPath] -> do
+      evaluateSolution imagePath solutionPath (Just imageComparisonPath)
 
     _ -> putStrLn $ unlines [
               "Usage:"
             , "- <imagePath> - dun rummy solver"
             , "- spiral <imagePath> - run spiral solver"
-            , "- evaluateSolution <imagePath> <solutionPath> - print out the cost of the solution"
+            , "- evaluateSolution <imagePath> <solutionPath> [<comparisonImagePath>] - print out the cost of the solution, and optionally write a visual comparison between the problem and the solution"
             ]
 
+evaluateSolution :: FilePath -> FilePath -> Maybe FilePath -> IO ()
+evaluateSolution imagePath solutionPath imageComparisonPath = do
+  image <- readPngImage imagePath
+  program <- AltReader.readProgramFromFile solutionPath
+  let result = AltEvaluator.evaluateProgram image program
+  case imageComparisonPath of
+    Nothing -> return ()
+    Just p -> do
+      let comparisonImg = beside [image, AltEvaluator.erImage result]
+      writePng p comparisonImg
+      putStrLn $ concat ["Comparison image written to ", p]
+  putStrLn $ concat ["The cost of this solution is ", show (AltEvaluator.erCost result)]

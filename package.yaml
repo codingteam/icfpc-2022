@@ -35,6 +35,7 @@ dependencies:
 - utf8-string
 - vector
 - JuicyPixels
+- JuicyPixels-extra
 
 ghc-options:
 - -Wall
