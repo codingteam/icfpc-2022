@@ -2,13 +2,10 @@
 module Evaluator where
 
 import qualified Data.Vector.Storable as VS
-import qualified Data.Vector.Generic as VG
 import qualified Data.Vector as V
 import Codec.Picture.Types
-import Foreign.Storable
 
 import Types
-import PNG
 
 type Cost = Int
 
@@ -31,26 +28,31 @@ imageToVector img =
   let (red, green, blue, alpha) = decomposeImg img
   in  V.zipWith4 (\r g b a -> V.fromList [r,g,b,a]) red green blue alpha
 
-sqr :: Float -> Float
+imageToVectorF :: Image PixelRGBA8 -> V.Vector (V.Vector Double)
+imageToVectorF img =
+  let (red, green, blue, alpha) = decomposeImg img
+      [redF, greenF, blueF, alphaF] = map (V.map fromIntegral) [red, green, blue, alpha]
+  in  V.zipWith4 (\r g b a -> V.fromList [r,g,b,a]) redF greenF blueF alphaF
+
+sqr :: Double -> Double
 sqr x = x*x
 
 imageSimilarity :: Image PixelRGBA8 -> Image PixelRGBA8 -> Cost
 imageSimilarity img1 img2 =
-  let vector1 = imageToVector img1
-      vector2 = imageToVector img2
+  let vector1 = imageToVectorF img1
+      vector2 = imageToVectorF img2
       diff = V.zipWith (V.zipWith (-)) vector1 vector2
-      diffF = V.map (V.map fromIntegral) diff :: V.Vector (V.Vector Float)
-      pixelDistances = V.map (sqrt . V.sum . V.map sqr) diffF
+      pixelDistances = V.map (sqrt . V.sum . V.map sqr) diff
       sumDistance = V.sum pixelDistances
       alpha = 0.005
   in  round $ alpha * sumDistance
 
-imagePartDeviation :: Image PixelRGBA8 -> Color -> Float
+imagePartDeviation :: Image PixelRGBA8 -> Color -> Double
 imagePartDeviation img (PixelRGBA8 tR tG tB tA) =
   let targetV = V.fromList [tR, tG, tB, tA]
       vector = imageToVector img
       diff = V.map (V.zipWith (-) targetV) vector
-      diffF = V.map (V.map fromIntegral) diff :: V.Vector (V.Vector Float)
+      diffF = V.map (V.map fromIntegral) diff :: V.Vector (V.Vector Double)
       pixelDistances = V.map (sqrt . V.sum . V.map sqr) diffF
       sumDistance = V.sum pixelDistances
   in sumDistance
