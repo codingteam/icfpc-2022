@@ -45,7 +45,8 @@ initialState size@(width,height) = initialState' size [(createBlockId 0, Rectang
 
 -- FIXME :: this does not fill image in the state from configuration!
 initialStateFromJson :: Configuration -> InterpreterState
-initialStateFromJson cfg = initialState' (cWidth cfg, cHeight cfg) (getBlocks cfg)
+initialStateFromJson cfg =
+  (initialState' (cWidth cfg, cHeight cfg) (getBlocks cfg)) {isLastBlockId = length (cBlocks cfg)}
 
 interpretProgram :: Program -> InterpretM ()
 interpretProgram p = forM_ p interpretMove

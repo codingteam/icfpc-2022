@@ -57,6 +57,10 @@ main = do
         program <- paintWithAvgColors cfgPath imgPath
         TIO.putStr $ Alt.Printer.printProgram program
 
+    ["mergeFromInitial", cfgPath, imgPath] -> do
+        program <- paintWithAvgColorsMerged cfgPath imgPath
+        TIO.putStr $ Alt.Printer.printProgram program
+
     ["evaluateSolution", imagePath, solutionPath] -> do
       evaluateSolution imagePath solutionPath Nothing
 
