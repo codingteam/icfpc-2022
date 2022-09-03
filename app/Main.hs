@@ -34,7 +34,12 @@ main = do
 
     ["quads", ls, path] -> do
         let level = read ls
-        program <- drawPngAverageQuads path level
+        program <- drawPngAverageQuads path False level
+        TIO.putStr $ printProgram program
+
+    ["quads-reset", ls, path] -> do
+        let level = read ls
+        program <- drawPngAverageQuads path True level
         TIO.putStr $ printProgram program
 
     ["recursive", path] -> do

@@ -98,8 +98,8 @@ drawPngAvgQuadsColor path = do
       paints = [SetColor quad (calcAvgColor img (blockShape quad)) | quad <- quads]
   return $ cut : paints
 
-drawPngAverageQuads :: FilePath -> Int -> IO Program
-drawPngAverageQuads path levels = do
+drawPngAverageQuads :: FilePath -> Bool -> Int -> IO Program
+drawPngAverageQuads path reset levels = do
   img <- readPngImage path
   let rootShape = Rectangle 0 0 (imageWidth img) (imageHeight img)
       root = Left $ SimpleBlock (BlockId [0]) rootShape white
@@ -110,7 +110,8 @@ drawPngAverageQuads path levels = do
               then Nothing
               else Just $ SetColor quad color
       paints = mapMaybe mkCommand quads
-  return $ reverse cuts ++ paints
+      initPaint = if reset then [SetColor root white] else []
+  return $ initPaint ++ reverse cuts ++ paints
 
 solveRecursiveP :: Image PixelRGBA8 -> Block -> ProgramM [Block]
 solveRecursiveP img block = do
