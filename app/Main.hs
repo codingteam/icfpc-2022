@@ -32,6 +32,10 @@ main = do
         program <- drawPngAvgQuadsColor path
         TIO.putStr $ printProgram program
 
+    ["search4", path] -> do
+        program <- drawPngQuadsSearch path
+        TIO.putStr $ printProgram program
+
     ["quads", ls, path] -> do
         let level = read ls
         program <- drawPngAverageQuads path False level

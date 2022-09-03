@@ -7,6 +7,7 @@ import Codec.Picture.Types
 
 import Types
 import Util
+import PNG (pixelToFloat, pixelDiff, PixelRGBAF (..))
 
 type Cost = Int
 
@@ -29,6 +30,11 @@ imageToVector img =
   let (red, green, blue, alpha) = decomposeImg img
   in  V.zipWith4 (\r g b a -> V.fromList [r,g,b,a]) red green blue alpha
 
+imageToVector' :: Image PixelRGBA8 -> V.Vector PixelRGBA8
+imageToVector' img =
+  let (red, green, blue, alpha) = decomposeImg img
+  in  V.zipWith4 PixelRGBA8 red green blue alpha
+
 imageToVectorF :: Image PixelRGBA8 -> V.Vector (V.Vector Double)
 imageToVectorF img =
   let (red, green, blue, alpha) = decomposeImg img
@@ -48,13 +54,29 @@ imageSimilarity img1 img2 =
       alpha = 0.005
   in  jsRound $ alpha * sumDistance
 
-imagePartDeviation :: Image PixelRGBA8 -> Color -> Double
-imagePartDeviation img (PixelRGBA8 tR tG tB tA) =
-  let targetV = V.fromList [tR, tG, tB, tA]
-      vector = imageToVector img
-      diff = V.map (V.zipWith (-) targetV) vector
-      diffF = V.map (V.map fromIntegral) diff :: V.Vector (V.Vector Double)
-      pixelDistances = V.map (sqrt . V.sum . V.map sqr) diffF
-      sumDistance = V.sum pixelDistances
+pixelNorm :: PixelRGBAF -> Float
+pixelNorm (PixelRGBAF r g b a) = sqrt $ r*r + g*g + b*b + a*a
+
+norm :: Float -> Float -> Float -> Float -> Float
+norm r g b a = sqrt $ r*r + g*g + b*b + a*a
+
+imageDeviation :: Image PixelRGBA8 -> Color -> Float
+imageDeviation img target =
+  let allPixels = [pixelAt img x y | x <- [0 .. imageWidth img - 1], y <- [0 .. imageHeight img - 1]]
+      diffs = map (pixelDiff target) allPixels
+      pixelDistances = map (pixelNorm . pixelToFloat) diffs
+      sumDistance = sum pixelDistances
+  in sumDistance
+
+imagePartDeviation :: Image PixelRGBA8 -> Shape -> Color -> Float
+imagePartDeviation img shape target =
+  let x0 = rX shape
+      y0 = rY shape
+      w = rWidth shape
+      h = rHeight shape
+      allPixels = [pixelAt img x y | x <- [x0 .. x0+w-1], y <- [y0 .. y0+h-1]]
+      diffs = map (pixelDiff target) allPixels
+      pixelDistances = map (pixelNorm . pixelToFloat) diffs
+      sumDistance = sum pixelDistances
   in sumDistance
 
