@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 module Types (
-    BlockId (..), (+.),
+    BlockId (..), (+.), createBlockId,
     Color, PixelRGBA8 (..), transparent, white,
     Coordinate,
     Shape (..), shapeArea,
@@ -20,18 +20,23 @@ import Data.Hashable
 import Data.List (intercalate)
 import GHC.Generics (Generic)
 import Text.Printf
+import qualified Data.Vector.Unboxed as VU
 
-newtype BlockId = BlockId [Int]
+newtype BlockId = BlockId (VU.Vector Int)
   deriving (Eq, Ord, Generic)
 
+createBlockId :: Int -> BlockId
+createBlockId i = BlockId (VU.singleton i)
+
 (+.) :: BlockId -> Int -> BlockId
-(BlockId ids) +. k = BlockId (k : ids)
+(BlockId ids) +. k = BlockId (VU.force $ ids `VU.snoc` k)
 
 instance Show BlockId where
-  show (BlockId ids) = intercalate "." $ map show $ reverse ids
+  show (BlockId ids) = intercalate "." $ map show $ VU.toList ids
 
 instance NFData BlockId
-instance Hashable BlockId
+instance Hashable BlockId where
+  hashWithSalt salt (BlockId i) = salt `hashWithSalt` (VU.length i) `hashWithSalt` (VU.toList i)
 
 type Color = PixelRGBA8
 

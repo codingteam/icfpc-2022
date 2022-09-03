@@ -34,7 +34,7 @@ initialState (width, height) =
         freezeImage img
   in  image `deepseq` InterpreterState {
         isLastBlockId = 0
-      , isBlocks = HMS.singleton (BlockId [0]) (Rectangle 0 0 width height)
+      , isBlocks = HMS.singleton (createBlockId 0) (Rectangle 0 0 width height)
       , isImage = image
       , isCost = 0
       }
@@ -137,7 +137,7 @@ interpretMove (Merge bId1 bId2) = modify' $ \is ->
   in case (bId1 `HMS.lookup` blocks, bId2 `HMS.lookup` blocks) of
     (Just shape1, Just shape2) ->
       let lastBlockId' = isLastBlockId is + 1
-          newBlockId = BlockId [lastBlockId']
+          newBlockId = createBlockId lastBlockId'
           newShape =
             if (rX shape1) == (rX shape2)
               then Rectangle (rX shape1) (minimum [rY shape1, rY shape2]) (rWidth shape1) (rHeight shape1 + rHeight shape2)

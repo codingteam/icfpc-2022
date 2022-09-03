@@ -5,6 +5,7 @@ module Alt.Reader (readProgramFromFile, readProgram) where
 import Data.List (foldl')
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
+import qualified Data.Vector.Unboxed as VU
 
 import Alt.AST
 import Types
@@ -38,7 +39,7 @@ readBlockId bId =
       Just (rest', ']') = T.unsnoc rest
       numbers = T.splitOn "." rest'
       numbers' = map parseNumber numbers
-  in BlockId (reverse numbers')
+  in BlockId (VU.fromList numbers')
 
 readPoint :: T.Text -> Point
 readPoint point =

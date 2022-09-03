@@ -71,7 +71,7 @@ drawByPixels root colors = do
 drawPng :: FilePath -> IO Program
 drawPng path = do
   (width, height, picture) <- readPng path
-  let root = Left $ SimpleBlock (BlockId [0]) (Rectangle 0 0 (width) (height)) white
+  let root = Left $ SimpleBlock (createBlockId 0) (Rectangle 0 0 (width) (height)) white
   let (_, program) = runState (drawByPixels root picture) []
   return $ reverse program
 
@@ -79,7 +79,7 @@ drawPngAvgColor :: FilePath -> IO Program
 drawPngAvgColor path = do
   img <- readPngImage path
   let shape = Rectangle 0 0 (imageWidth img) (imageHeight img)
-      root = Left $ SimpleBlock (BlockId [0]) shape white
+      root = Left $ SimpleBlock (createBlockId 0) shape white
       avgColor = calcAvgColor img shape
       paint = SetColor root avgColor
       program = [paint]
@@ -89,7 +89,7 @@ drawPngAvgQuadsColor :: FilePath -> IO Program
 drawPngAvgQuadsColor path = do
   img <- readPngImage path
   let rootShape = Rectangle 0 0 (imageWidth img) (imageHeight img)
-      root = Left $ SimpleBlock (BlockId [0]) rootShape white
+      root = Left $ SimpleBlock (createBlockId 0) rootShape white
       middleX = rX rootShape + (rWidth rootShape `div` 2)
       middleY = rY rootShape + (rHeight rootShape `div` 2)
       center = Point middleX middleY
@@ -102,7 +102,7 @@ drawPngAverageQuads :: FilePath -> Int -> IO Program
 drawPngAverageQuads path levels = do
   img <- readPngImage path
   let rootShape = Rectangle 0 0 (imageWidth img) (imageHeight img)
-      root = Left $ SimpleBlock (BlockId [0]) rootShape white
+      root = Left $ SimpleBlock (createBlockId 0) rootShape white
       (quads, cuts) = runState (cutToQuads levels root) []
       mkCommand quad =
         let color = calcAvgColor img (blockShape quad)
@@ -136,12 +136,12 @@ solveRecursiveP img block = do
            else do
                 putMove $ SetColor block commonAvgColor
                 return [block]
-         
+
 solveRecursive :: FilePath -> IO Program
 solveRecursive path = do
   img <- readPngImage path
   let rootShape = Rectangle 0 0 (imageWidth img) (imageHeight img)
-      root = Left $ SimpleBlock (BlockId [0]) rootShape white
+      root = Left $ SimpleBlock (createBlockId 0) rootShape white
       (_, program) = runState (solveRecursiveP img root) []
   return $ reverse program
 
