@@ -15,6 +15,7 @@ data InterpreterState = InterpreterState {
     isLastBlockId :: Int
   , isBlocks :: M.Map BlockId Shape
   , isImage :: Image PixelRGBA8
+  , isCost :: Integer
   }
 
 type InterpretM a = State InterpreterState a
@@ -30,6 +31,7 @@ initialState (width, height) =
         isLastBlockId = 0
       , isBlocks = M.singleton (BlockId [0]) (Rectangle 0 0 width height)
       , isImage = image
+      , isCost = 0
       }
 
 interpretProgram :: Program -> InterpretM ()
@@ -54,7 +56,8 @@ interpretMove (PointCut blockId (Point x y)) = modify' $ \is ->
             $ M.insert (blockId +. 3) topLeft
             $ M.delete blockId
             $ isBlocks is
-      in is { isBlocks = blocks' }
+          cost = calculateMoveCost (isImage is) 10 parent
+      in is { isBlocks = blocks', isCost = cost + isCost is }
 interpretMove (LineCut blockId Horizontal y) = modify' $ \is ->
   case blockId `M.lookup` (isBlocks is) of
     Nothing -> is
@@ -67,7 +70,8 @@ interpretMove (LineCut blockId Horizontal y) = modify' $ \is ->
             $ M.insert (blockId +. 1) top
             $ M.delete blockId
             $ isBlocks is
-      in is { isBlocks = blocks' }
+          cost = calculateMoveCost (isImage is) 7 parent
+      in is { isBlocks = blocks', isCost = cost + isCost is }
 interpretMove (LineCut blockId Vertical x) = modify' $ \is ->
   case blockId `M.lookup` (isBlocks is) of
     Nothing -> is
@@ -80,11 +84,12 @@ interpretMove (LineCut blockId Vertical x) = modify' $ \is ->
             $ M.insert (blockId +. 1) right
             $ M.delete blockId
             $ isBlocks is
-      in is { isBlocks = blocks' }
+          cost = calculateMoveCost (isImage is) 7 parent
+      in is { isBlocks = blocks', isCost = cost + isCost is }
 interpretMove (SetColor blockId color) = modify' $ \is ->
   case blockId `M.lookup` (isBlocks is) of
     Nothing -> is
-    Just (Rectangle { .. }) ->
+    Just shape@(Rectangle { .. }) ->
       let image = isImage is
           image' = runST $ do
             img <- thawImage image
@@ -96,7 +101,8 @@ interpretMove (SetColor blockId color) = modify' $ \is ->
                 writePixel img x y color
 
             freezeImage img
-      in  is { isImage = image' }
+          cost = calculateMoveCost image 5 shape
+      in  is { isImage = image', isCost = cost + isCost is }
 interpretMove (Swap blockId1 blockId2) = modify' $ \is ->
   let blocks = isBlocks is
   in case (blockId1 `M.lookup` blocks, blockId2 `M.lookup` blocks) of
@@ -113,7 +119,8 @@ interpretMove (Swap blockId1 blockId2) = modify' $ \is ->
               M.insert blockId1 shape2
             $ M.insert blockId2 shape1
             $ isBlocks is
-      in is { isImage = image', isBlocks = blocks' }
+          cost = calculateMoveCost (isImage is) 3 shape1
+      in is { isImage = image', isBlocks = blocks', isCost = cost + isCost is }
     _ -> is
 interpretMove (Merge blockId1 blockId2) = modify' $ \is ->
   let blocks = isBlocks is
@@ -130,7 +137,14 @@ interpretMove (Merge blockId1 blockId2) = modify' $ \is ->
             $ M.delete blockId1
             $ M.delete blockId2
             $ isBlocks is
-      in is { isLastBlockId = lastBlockId', isBlocks = blocks' }
+          -- Announcement from 02/09/2022, 21:35:00:
+          -- When two blocks are merged, the cost is calculated by picking the
+          -- larger block for computation.
+          cost =
+            if shapeArea shape1 > shapeArea shape2
+              then calculateMoveCost (isImage is) 1 shape1
+              else calculateMoveCost (isImage is) 1 shape2
+      in is { isLastBlockId = lastBlockId', isBlocks = blocks', isCost = cost + isCost is }
     _ -> is
 
 copyShape :: Image PixelRGBA8 -> Shape -> MutableImage s PixelRGBA8 -> Shape -> ST s ()
@@ -145,3 +159,11 @@ copyShape srcImage srcShape dstImage dstShape = do
       let dstX = rX dstShape + dx
       let pixel = pixelAt srcImage srcX srcY
       writePixel dstImage dstX dstY pixel
+
+calculateMoveCost :: Image a -> Integer -> Shape -> Integer
+calculateMoveCost image baseCost shape =
+  let canvasArea = (fromIntegral $ imageWidth image) * (fromIntegral $ imageHeight image)
+      lhs = baseCost * canvasArea
+      rhs = shapeArea shape
+      fraction = (fromIntegral lhs :: Double) / (fromIntegral rhs)
+  in round fraction
