@@ -7,7 +7,7 @@ import Codec.Picture.Types
 
 import Types
 import Util
-import PNG (pixelToFloat, pixelDiff, PixelRGBAF (..))
+import PNG (pixelToFloat, pixelDiff, PixelRGBAF (..), subImage)
 
 type Cost = Int
 
@@ -61,22 +61,19 @@ norm :: Float -> Float -> Float -> Float -> Float
 norm r g b a = sqrt $ r*r + g*g + b*b + a*a
 
 imageDeviation :: Image PixelRGBA8 -> Color -> Float
-imageDeviation img target =
-  let allPixels = [pixelAt img x y | x <- [0 .. imageWidth img - 1], y <- [0 .. imageHeight img - 1]]
-      diffs = map (pixelDiff target) allPixels
-      pixelDistances = map (pixelNorm . pixelToFloat) diffs
+imageDeviation img target@(PixelRGBA8 tR tG tB tA) =
+  let vector = VS.toList $ imageData img
+      w = imageWidth img
+      h = imageHeight img
+      p = 4
+      targetV = concat $ replicate (w*h) [tR, tG, tB, tA]
+      diffs = zipWith (-) vector targetV
+      sqrs = VS.fromList $ map (\x -> fromIntegral (x*x)) diffs
+      calcNorm v = sqrt (VS.sum v)
+      pixelDistances = [calcNorm (VS.slice (p*i) p sqrs) | i <- [0 .. w*h-1]]
       sumDistance = sum pixelDistances
   in sumDistance
 
 imagePartDeviation :: Image PixelRGBA8 -> Shape -> Color -> Float
-imagePartDeviation img shape target =
-  let x0 = rX shape
-      y0 = rY shape
-      w = rWidth shape
-      h = rHeight shape
-      allPixels = [pixelAt img x y | x <- [x0 .. x0+w-1], y <- [y0 .. y0+h-1]]
-      diffs = map (pixelDiff target) allPixels
-      pixelDistances = map (pixelNorm . pixelToFloat) diffs
-      sumDistance = sum pixelDistances
-  in sumDistance
+imagePartDeviation img shape target = imageDeviation (subImage img shape) target
 

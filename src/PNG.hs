@@ -38,29 +38,29 @@ pixelDiff (PixelRGBA8 r1 g1 b1 a1) (PixelRGBA8 r2 g2 b2 a2) = PixelRGBA8 (r1-r2)
 pixelToFloat :: PixelRGBA8 -> PixelRGBAF
 pixelToFloat (PixelRGBA8 r g b a) = PixelRGBAF (fromIntegral r) (fromIntegral g) (fromIntegral b) (fromIntegral a)
 
-subImage :: Image PixelRGBA8 -> Shape -> Image PixelRGBA8
-subImage img shape = crop x y w h img
-  where
-    w = rWidth shape
-    h = rHeight shape
-    x = rX shape
-    y = rY shape
-
 -- subImage :: Image PixelRGBA8 -> Shape -> Image PixelRGBA8
--- subImage img shape = Image (rWidth shape) (rHeight shape) subData
---    where
---     p = 4
---     w = imageWidth img
---     h = imageHeight img
---     w' = rWidth shape
---     h' = rHeight shape
+-- subImage img shape = crop x y w h img
+--   where
+--     w = rWidth shape
+--     h = rHeight shape
 --     x = rX shape
---     y = h - rY shape
---     vector = imageData img
---     imageRows = V.fromList [VS.convert $ VS.slice (w*p*i) (w*p) vector | i <- [0 .. h-1]]
---     rows = V.slice (y - h') h' imageRows
---     subRows = V.map (V.slice (p*x) (p*w')) rows
---     subData = VS.convert $ V.concat (V.toList subRows)
+--     y = rY shape
+
+subImage :: Image PixelRGBA8 -> Shape -> Image PixelRGBA8
+subImage img shape = Image (rWidth shape) (rHeight shape) subData
+   where
+    p = 4
+    w = imageWidth img
+    h = imageHeight img
+    w' = rWidth shape
+    h' = rHeight shape
+    x = rX shape
+    y = h - rY shape
+    vector = imageData img
+    imageRows = V.fromList [VS.convert $ VS.slice (w*p*i) (w*p) vector | i <- [0 .. h-1]]
+    rows = V.slice (y - h') h' imageRows
+    subRows = V.map (V.slice (p*x) (p*w')) rows
+    subData = VS.convert $ V.concat (V.toList subRows)
 
 
 calcAvgColor :: Image PixelRGBA8 -> Shape -> Color
