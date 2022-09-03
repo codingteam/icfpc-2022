@@ -3,11 +3,16 @@
 import requests
 from os.path import join
 import json
+import sys
 
 BASEURL = "https://robovinci.xyz/api"
 
-with open('api.token') as f:
-    TOKEN = f.read().strip()
+try:
+    with open('api.token') as f:
+        TOKEN = f.read().strip()
+except FileNotFoundError:
+    print("Please put the API token into a file called api.token")
+    sys.exit(1)
 
 def do_get(url):
     rs = requests.get(url, headers={"Authorization": f"Bearer {TOKEN}"})
