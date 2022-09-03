@@ -40,5 +40,9 @@ main = do
         program <- solveRecursive path
         TIO.putStr $ printProgram program
 
-    _ -> putStrLn "Usage:\n- <imagePath> - dun rummy solver\n- spiral <imagePath> - run spiral solver"
+    _ -> putStrLn $ unlines [
+              "Usage:"
+            , "- <imagePath> - dun rummy solver"
+            , "- spiral <imagePath> - run spiral solver"
+            ]
 
