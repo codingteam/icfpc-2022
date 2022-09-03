@@ -11,6 +11,7 @@ import Printer
 import qualified Alt.Evaluator as AltEvaluator
 import qualified Alt.Reader as AltReader
 import qualified Alt.Printer
+import qualified Alt.Interpreter as AltInterpreter
 import qualified SpiralSolver
 import Json (parseConfig)
 import Alt.DummySolver
@@ -62,10 +63,13 @@ main = do
         TIO.putStr $ Alt.Printer.printProgram program
 
     ["evaluateSolution", imagePath, solutionPath] -> do
-      evaluateSolution imagePath solutionPath Nothing
+      evaluateSolution imagePath solutionPath Nothing Nothing
 
     ["evaluateSolution", imagePath, solutionPath, imageComparisonPath] -> do
-      evaluateSolution imagePath solutionPath (Just imageComparisonPath)
+      evaluateSolution imagePath solutionPath (Just imageComparisonPath) Nothing
+
+    ["evaluateSolution", imagePath, solutionPath, imageComparisonPath, cfgPath] -> do
+      evaluateSolution imagePath solutionPath (Just imageComparisonPath) (Just cfgPath)
 
     ["parseConfig", path] -> do
       cfg <- parseConfig path
@@ -78,11 +82,13 @@ main = do
             , "- evaluateSolution <imagePath> <solutionPath> [<comparisonImagePath>] - print out the cost of the solution, and optionally write a visual comparison between the problem and the solution"
             ]
 
-evaluateSolution :: FilePath -> FilePath -> Maybe FilePath -> IO ()
-evaluateSolution imagePath solutionPath imageComparisonPath = do
+evaluateSolution :: FilePath -> FilePath -> Maybe FilePath -> Maybe FilePath -> IO ()
+evaluateSolution imagePath solutionPath imageComparisonPath cfgPath = do
   image <- readPngImage imagePath
   program <- AltReader.readProgramFromFile solutionPath
-  let result = AltEvaluator.evaluateProgram image program
+  cfg <- sequence $ parseConfig <$> cfgPath
+  let initialState = AltInterpreter.initialStateFromJson <$> cfg
+  let result = AltEvaluator.evaluateProgram image program initialState
   case imageComparisonPath of
     Nothing -> return ()
     Just p -> do
