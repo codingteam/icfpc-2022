@@ -4,8 +4,8 @@ module Alt.Interpreter where
 
 import Codec.Picture.Types
 import Control.Monad
-import Control.Monad.State
 import Control.Monad.ST (ST, runST)
+import Control.Monad.State
 import qualified Data.Map as M
 
 import Alt.AST
@@ -15,7 +15,7 @@ data InterpreterState = InterpreterState {
     isLastBlockId :: Int
   , isBlocks :: M.Map BlockId Shape
   , isImage :: Image PixelRGBA8
-  , isCost :: Integer
+  , isCost :: Int
   }
 
 type InterpretM a = State InterpreterState a
@@ -160,7 +160,7 @@ copyShape srcImage srcShape dstImage dstShape = do
       let pixel = pixelAt srcImage srcX srcY
       writePixel dstImage dstX dstY pixel
 
-calculateMoveCost :: Image a -> Integer -> Shape -> Integer
+calculateMoveCost :: Image a -> Int -> Shape -> Int
 calculateMoveCost image baseCost shape =
   let canvasArea = (fromIntegral $ imageWidth image) * (fromIntegral $ imageHeight image)
       lhs = baseCost * canvasArea

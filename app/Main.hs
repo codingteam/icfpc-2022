@@ -1,14 +1,13 @@
 module Main where
 
-import Control.Monad
-import Control.Monad.State
 import qualified Data.Text.IO as TIO
 import System.Environment
 
-import Types
-import AST
 import DummySolver
+import PNG
 import Printer
+import qualified Alt.Evaluator as AltEvaluator
+import qualified Alt.Reader as AltReader
 import qualified SpiralSolver
 
 main :: IO ()
@@ -40,9 +39,16 @@ main = do
         program <- solveRecursive path
         TIO.putStr $ printProgram program
 
+    ["evaluateSolution", imagePath, solutionPath] -> do
+        image <- readPngImage imagePath
+        program <- AltReader.readProgramFromFile solutionPath
+        let result = AltEvaluator.evaluateProgram image program
+        putStrLn $ concat ["The cost of this solution is ", show (AltEvaluator.erCost result)]
+
     _ -> putStrLn $ unlines [
               "Usage:"
             , "- <imagePath> - dun rummy solver"
             , "- spiral <imagePath> - run spiral solver"
+            , "- evaluateSolution <imagePath> <solutionPath> - print out the cost of the solution"
             ]
 
