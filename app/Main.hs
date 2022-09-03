@@ -84,5 +84,4 @@ evaluateSolution imagePath solutionPath imageComparisonPath = do
     Just p -> do
       let comparisonImg = beside [image, AltEvaluator.erImage result]
       writePng p comparisonImg
-      putStrLn $ concat ["Comparison image written to ", p]
-  putStrLn $ concat ["The cost of this solution is ", show (AltEvaluator.erCost result)]
+  putStrLn $ show $ AltEvaluator.erCost result
