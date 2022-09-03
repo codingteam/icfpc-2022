@@ -15,11 +15,13 @@ import qualified Data.Vector as V
 
 import Alt.AST
 import Types
+import Util
 
-solve :: Image PixelRGBA8 -> Program
-solve problem =
+solve :: Image PixelRGBA8 -> Int -> Program
+solve problem color_diff_tolerance =
   let avgs = avgColorPerColumn problem
-  in produceProgram (V.toList avgs)
+      dumbified_avgs = simplify color_diff_tolerance (V.toList avgs)
+  in produceProgram dumbified_avgs
 
 avgColorPerColumn :: Image PixelRGBA8 -> V.Vector PixelRGBA8
 avgColorPerColumn image =
@@ -59,3 +61,22 @@ produceProgram = go [] (createBlockId 0) 1
             action2 = LineCut bId Vertical x
             nextBlockId = bId +. 1
         in go (action2:action1:program) nextBlockId (x+1) (nextColor:avgs)
+
+simplify :: Int -> [PixelRGBA8] -> [PixelRGBA8]
+simplify color_diff_tolerance = go
+  where
+  go [] = []
+  go [c] = [c]
+  go (c1:c2:avgs)
+    | colorDiff c1 c2 < color_diff_tolerance = c1 : go (c1:avgs)
+    | otherwise = c1 : go (c2:avgs)
+
+colorDiff :: PixelRGBA8 -> PixelRGBA8 -> Int
+colorDiff (PixelRGBA8 r1 g1 b1 a1) (PixelRGBA8 r2 g2 b2 a2) =
+    jsRound
+  $ sqrt
+  $ sum
+  $ map (\x -> x*x)
+  $ zipWith (-)
+      (map fromIntegral [r1, g1, b1, a1])
+      (map fromIntegral [r2, g2, b2, a2])
