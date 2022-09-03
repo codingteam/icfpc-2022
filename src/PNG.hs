@@ -10,7 +10,7 @@ import Codec.Picture.Types
 import Codec.Picture.Png (decodePng)
 
 import Types(Color, Coordinate, Point(..), Shape (..))
-  
+
 readPng :: FilePath -> IO (Coordinate, Coordinate, [(Point, Color)])
 readPng path = do
   pngData <- B.readFile path
@@ -45,10 +45,10 @@ subImage img shape = Image (rWidth shape) (rHeight shape) subData
     x = rX shape
     y = h - rY shape
     vector = imageData img
-    imageLines = V.fromList [VS.convert $ VS.slice (w*p*i) (w*p) vector | i <- [0 .. h-1]]
-    lines = V.slice (y - h') h' imageLines
-    subLines = V.map (V.slice (p*x) (p*w')) lines
-    subData = VS.convert $ V.concat (V.toList subLines)
+    imageRows = V.fromList [VS.convert $ VS.slice (w*p*i) (w*p) vector | i <- [0 .. h-1]]
+    rows = V.slice (y - h') h' imageRows
+    subRows = V.map (V.slice (p*x) (p*w')) rows
+    subData = VS.convert $ V.concat (V.toList subRows)
 
 calcAvgColor :: Image PixelRGBA8 -> Shape -> Color
 calcAvgColor img shape =

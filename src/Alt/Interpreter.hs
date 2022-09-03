@@ -39,8 +39,8 @@ interpretProgram :: Program -> InterpretM ()
 interpretProgram p = forM_ p interpretMove
 
 interpretMove :: Move -> InterpretM ()
-interpretMove (PointCut blockId (Point x y)) = modify' $ \is ->
-  case blockId `M.lookup` (isBlocks is) of
+interpretMove (PointCut bId (Point x y)) = modify' $ \is ->
+  case bId `M.lookup` (isBlocks is) of
     Nothing -> is
     Just parent ->
       let dx = x - rX parent
@@ -51,44 +51,44 @@ interpretMove (PointCut blockId (Point x y)) = modify' $ \is ->
           topLeft = Rectangle (rX parent) (rY parent + dy) dx (rHeight parent - dy)
 
           blocks' =
-              M.insert (blockId +. 0) bottomLeft
-            $ M.insert (blockId +. 1) bottomRight
-            $ M.insert (blockId +. 2) topRight
-            $ M.insert (blockId +. 3) topLeft
-            $ M.delete blockId
+              M.insert (bId +. 0) bottomLeft
+            $ M.insert (bId +. 1) bottomRight
+            $ M.insert (bId +. 2) topRight
+            $ M.insert (bId +. 3) topLeft
+            $ M.delete bId
             $ isBlocks is
           cost = calculateMoveCost (isImage is) 10 parent
       in is { isBlocks = blocks', isCost = cost + isCost is }
-interpretMove (LineCut blockId Horizontal y) = modify' $ \is ->
-  case blockId `M.lookup` (isBlocks is) of
+interpretMove (LineCut bId Horizontal y) = modify' $ \is ->
+  case bId `M.lookup` (isBlocks is) of
     Nothing -> is
     Just parent ->
       let dy = y - rY parent
           top = Rectangle (rX parent) (rY parent + dy) (rWidth parent) (rHeight parent - dy)
           bottom = Rectangle (rX parent) (rY parent) (rWidth parent) dy
           blocks' =
-              M.insert (blockId +. 0) bottom
-            $ M.insert (blockId +. 1) top
-            $ M.delete blockId
+              M.insert (bId +. 0) bottom
+            $ M.insert (bId +. 1) top
+            $ M.delete bId
             $ isBlocks is
           cost = calculateMoveCost (isImage is) 7 parent
       in is { isBlocks = blocks', isCost = cost + isCost is }
-interpretMove (LineCut blockId Vertical x) = modify' $ \is ->
-  case blockId `M.lookup` (isBlocks is) of
+interpretMove (LineCut bId Vertical x) = modify' $ \is ->
+  case bId `M.lookup` (isBlocks is) of
     Nothing -> is
     Just parent ->
       let dx = x - rX parent
           left = Rectangle (rX parent) (rY parent) dx (rHeight parent)
           right = Rectangle (rX parent + dx) (rY parent) (rWidth parent - dx) (rHeight parent)
           blocks' =
-              M.insert (blockId +. 0) left
-            $ M.insert (blockId +. 1) right
-            $ M.delete blockId
+              M.insert (bId +. 0) left
+            $ M.insert (bId +. 1) right
+            $ M.delete bId
             $ isBlocks is
           cost = calculateMoveCost (isImage is) 7 parent
       in is { isBlocks = blocks', isCost = cost + isCost is }
-interpretMove (SetColor blockId color) = modify' $ \is ->
-  case blockId `M.lookup` (isBlocks is) of
+interpretMove (SetColor bId color) = modify' $ \is ->
+  case bId `M.lookup` (isBlocks is) of
     Nothing -> is
     Just shape@(Rectangle { .. }) ->
       let image = isImage is
@@ -104,9 +104,9 @@ interpretMove (SetColor blockId color) = modify' $ \is ->
             freezeImage img
           cost = calculateMoveCost image 5 shape
       in  is { isImage = image', isCost = cost + isCost is }
-interpretMove (Swap blockId1 blockId2) = modify' $ \is ->
+interpretMove (Swap bId1 bId2) = modify' $ \is ->
   let blocks = isBlocks is
-  in case (blockId1 `M.lookup` blocks, blockId2 `M.lookup` blocks) of
+  in case (bId1 `M.lookup` blocks, bId2 `M.lookup` blocks) of
     (Just shape1, Just shape2) ->
       let image = isImage is
           image' = runST $ do
@@ -117,15 +117,15 @@ interpretMove (Swap blockId1 blockId2) = modify' $ \is ->
 
             freezeImage img
           blocks' =
-              M.insert blockId1 shape2
-            $ M.insert blockId2 shape1
+              M.insert bId1 shape2
+            $ M.insert bId2 shape1
             $ isBlocks is
           cost = calculateMoveCost (isImage is) 3 shape1
       in is { isImage = image', isBlocks = blocks', isCost = cost + isCost is }
     _ -> is
-interpretMove (Merge blockId1 blockId2) = modify' $ \is ->
+interpretMove (Merge bId1 bId2) = modify' $ \is ->
   let blocks = isBlocks is
-  in case (blockId1 `M.lookup` blocks, blockId2 `M.lookup` blocks) of
+  in case (bId1 `M.lookup` blocks, bId2 `M.lookup` blocks) of
     (Just shape1, Just shape2) ->
       let lastBlockId' = isLastBlockId is + 1
           newBlockId = BlockId [lastBlockId']
@@ -135,8 +135,8 @@ interpretMove (Merge blockId1 blockId2) = modify' $ \is ->
               else Rectangle (minimum [rX shape1, rX shape2]) (rY shape1) (rWidth shape1 + rWidth shape2) (rHeight shape1)
           blocks' =
               M.insert newBlockId newShape
-            $ M.delete blockId1
-            $ M.delete blockId2
+            $ M.delete bId1
+            $ M.delete bId2
             $ isBlocks is
           -- Announcement from 02/09/2022, 21:35:00:
           -- When two blocks are merged, the cost is calculated by picking the
