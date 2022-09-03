@@ -73,11 +73,18 @@ main = do
         let program = Alt.Solver.Billboard.solve image (read color_diff_tolerance)
         TIO.putStr $ Alt.Printer.printProgram program
 
+    -- TODO: properly parse optional arguments
     ["evaluateSolution", imagePath, solutionPath] -> do
+      evaluateSolution imagePath solutionPath Nothing Nothing
+
+    ["evaluateSolution", imagePath, solutionPath, ""] -> do
       evaluateSolution imagePath solutionPath Nothing Nothing
 
     ["evaluateSolution", imagePath, solutionPath, imageComparisonPath] -> do
       evaluateSolution imagePath solutionPath (Just imageComparisonPath) Nothing
+
+    ["evaluateSolution", imagePath, solutionPath, "", cfgPath] -> do
+      evaluateSolution imagePath solutionPath Nothing (Just cfgPath)
 
     ["evaluateSolution", imagePath, solutionPath, imageComparisonPath, cfgPath] -> do
       evaluateSolution imagePath solutionPath (Just imageComparisonPath) (Just cfgPath)
