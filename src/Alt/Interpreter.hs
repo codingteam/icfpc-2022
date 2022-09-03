@@ -17,7 +17,7 @@ data InterpreterState = InterpreterState {
     isLastBlockId :: !Int
   , isBlocks :: HMS.HashMap BlockId Shape
   , isImage :: Image PixelRGBA8
-  , isCost :: !Int
+  , isCost :: !Integer
   }
 
 type InterpretM a = State InterpreterState a
@@ -162,7 +162,7 @@ copyShape srcImage srcShape dstImage dstShape = do
       let pixel = pixelAt srcImage srcX srcY
       writePixel dstImage dstX dstY pixel
 
-calculateMoveCost :: Image a -> Int -> Shape -> Int
+calculateMoveCost :: Image a -> Integer -> Shape -> Integer
 calculateMoveCost image baseCost shape =
   let canvasArea = (fromIntegral $ imageWidth image) * (fromIntegral $ imageHeight image)
       lhs = baseCost * canvasArea

@@ -11,7 +11,7 @@ import Types
 
 data EvaluationResult = EvaluationResult {
     erImage :: Image PixelRGBA8
-  , erCost :: !Int
+  , erCost :: !Integer
   }
 
 evaluateProgram :: Image PixelRGBA8 -> Program -> EvaluationResult
@@ -20,7 +20,7 @@ evaluateProgram image program =
       finish = execState (interpretProgram program) start
 
       finalImage = isImage finish
-      totalCost = (isCost finish) + (imageSimilarity image finalImage)
+      totalCost = (isCost finish) + (fromIntegral $ imageSimilarity image finalImage)
   in finalImage `deepseq` totalCost `deepseq` EvaluationResult {
         erImage = finalImage
       , erCost = totalCost
