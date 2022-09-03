@@ -10,7 +10,10 @@ import PNG
 import Printer
 import qualified Alt.Evaluator as AltEvaluator
 import qualified Alt.Reader as AltReader
+import qualified Alt.Printer
 import qualified SpiralSolver
+import Json (parseConfig)
+import Alt.DummySolver
 
 main :: IO ()
 main = do
@@ -32,6 +35,10 @@ main = do
         program <- drawPngAvgQuadsColor path
         TIO.putStr $ printProgram program
 
+    ["search4", path] -> do
+        program <- drawPngQuadsSearch path
+        TIO.putStr $ printProgram program
+
     ["quads", ls, path] -> do
         let level = read ls
         program <- drawPngAverageQuads path False level
@@ -46,11 +53,19 @@ main = do
         program <- solveRecursive path
         TIO.putStr $ printProgram program
 
+    ["dumbFromInitial", cfgPath, imgPath] -> do
+        program <- paintWithAvgColors cfgPath imgPath
+        TIO.putStr $ Alt.Printer.printProgram program
+
     ["evaluateSolution", imagePath, solutionPath] -> do
       evaluateSolution imagePath solutionPath Nothing
 
     ["evaluateSolution", imagePath, solutionPath, imageComparisonPath] -> do
       evaluateSolution imagePath solutionPath (Just imageComparisonPath)
+
+    ["parseConfig", path] -> do
+      cfg <- parseConfig path
+      print cfg
 
     _ -> putStrLn $ unlines [
               "Usage:"

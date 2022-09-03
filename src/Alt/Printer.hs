@@ -3,6 +3,7 @@
 module Alt.Printer (printProgram) where
 
 import qualified Data.Text as T
+import qualified Data.Vector.Unboxed as VU
 
 import Types
 import Alt.AST
@@ -11,7 +12,7 @@ printProgram :: Program -> T.Text
 printProgram p = T.unlines $ map printMove p
 
 printBlockId :: BlockId -> T.Text
-printBlockId (BlockId ids) = T.intercalate "." $ map (T.pack . show) $ reverse ids
+printBlockId (BlockId ids) = "[" <> (T.intercalate "." $ map (T.pack . show) $ VU.toList ids) <> "]"
 
 printPoint :: Point -> T.Text
 printPoint p = "[" <> T.pack (show $ pX p) <> "," <> T.pack (show $ pY p) <> "]"

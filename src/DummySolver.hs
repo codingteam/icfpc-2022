@@ -5,6 +5,8 @@ import Control.Monad
 import Control.Monad.State
 import qualified Data.Map as M
 import Data.Maybe (mapMaybe)
+import Data.List (minimumBy)
+import Data.Function (on)
 import Codec.Picture.Types
 
 import PNG (readPng, readPngImage, calcAvgColor, subImage)
@@ -71,7 +73,7 @@ drawByPixels root colors = do
 drawPng :: FilePath -> IO Program
 drawPng path = do
   (width, height, picture) <- readPng path
-  let root = Left $ SimpleBlock (BlockId [0]) (Rectangle 0 0 (width) (height)) white
+  let root = Left $ SimpleBlock (createBlockId 0) (Rectangle 0 0 (width) (height)) white
   let (_, program) = runState (drawByPixels root picture) []
   return $ reverse program
 
@@ -79,7 +81,7 @@ drawPngAvgColor :: FilePath -> IO Program
 drawPngAvgColor path = do
   img <- readPngImage path
   let shape = Rectangle 0 0 (imageWidth img) (imageHeight img)
-      root = Left $ SimpleBlock (BlockId [0]) shape white
+      root = Left $ SimpleBlock (createBlockId 0) shape white
       avgColor = calcAvgColor img shape
       paint = SetColor root avgColor
       program = [paint]
@@ -89,7 +91,7 @@ drawPngAvgQuadsColor :: FilePath -> IO Program
 drawPngAvgQuadsColor path = do
   img <- readPngImage path
   let rootShape = Rectangle 0 0 (imageWidth img) (imageHeight img)
-      root = Left $ SimpleBlock (BlockId [0]) rootShape white
+      root = Left $ SimpleBlock (createBlockId 0) rootShape white
       middleX = rX rootShape + (rWidth rootShape `div` 2)
       middleY = rY rootShape + (rHeight rootShape `div` 2)
       center = Point middleX middleY
@@ -98,11 +100,29 @@ drawPngAvgQuadsColor path = do
       paints = [SetColor quad (calcAvgColor img (blockShape quad)) | quad <- quads]
   return $ cut : paints
 
+drawPngQuadsSearch :: FilePath -> IO Program
+drawPngQuadsSearch path = do
+  img <- readPngImage path
+  let rootShape = Rectangle 0 0 (imageWidth img) (imageHeight img)
+      root = Left $ SimpleBlock (createBlockId 0) rootShape white
+      checkPoint p =
+        let quads = cutPoint root p
+            subAvgColors = [calcAvgColor img (blockShape quad) | quad <- quads]
+            subRhos = [imagePartDeviation img (blockShape quad) avg | (quad, avg) <- zip quads subAvgColors]
+        in  (p, sum subRhos, quads, subAvgColors)
+      allPoints = [Point x y | x <- [1, 11 .. imageWidth img - 2], y <- [1, 11 .. imageHeight img - 2]]
+      checkResults = map checkPoint allPoints
+      (bestPoint, _, bestQuads, avgColors) = minimumBy (compare `on` \(_,rho,_,_) -> rho) checkResults
+      cut = PointCut root bestPoint
+      paints = zipWith SetColor bestQuads avgColors
+  -- print checkResults
+  return $ cut : paints
+
 drawPngAverageQuads :: FilePath -> Bool -> Int -> IO Program
 drawPngAverageQuads path reset levels = do
   img <- readPngImage path
   let rootShape = Rectangle 0 0 (imageWidth img) (imageHeight img)
-      root = Left $ SimpleBlock (BlockId [0]) rootShape white
+      root = Left $ SimpleBlock (createBlockId 0) rootShape white
       (quads, cuts) = runState (cutToQuads levels root) []
       mkCommand quad =
         let color = calcAvgColor img (blockShape quad)
@@ -127,9 +147,9 @@ solveRecursiveP img block = do
              mid = Point middleX middleY
              children = cutPoint block (Point middleX middleY)
              commonAvgColor = calcAvgColor img shape
-             commonRho = imagePartDeviation (subImage img shape) commonAvgColor
+             commonRho = imagePartDeviation img shape commonAvgColor
              subAvgColors = [calcAvgColor img (blockShape child) | child <- children]
-             subRhos = [imagePartDeviation (subImage img (blockShape child)) avg | (child, avg) <- zip children subAvgColors]
+             subRhos = [imagePartDeviation img (blockShape child) avg | (child, avg) <- zip children subAvgColors]
          if sum subRhos < commonRho
            then do
                 putMove $ PointCut block mid
@@ -137,12 +157,12 @@ solveRecursiveP img block = do
            else do
                 putMove $ SetColor block commonAvgColor
                 return [block]
-         
+
 solveRecursive :: FilePath -> IO Program
 solveRecursive path = do
   img <- readPngImage path
   let rootShape = Rectangle 0 0 (imageWidth img) (imageHeight img)
-      root = Left $ SimpleBlock (BlockId [0]) rootShape white
+      root = Left $ SimpleBlock (createBlockId 0) rootShape white
       (_, program) = runState (solveRecursiveP img root) []
   return $ reverse program
 
