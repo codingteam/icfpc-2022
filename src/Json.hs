@@ -82,3 +82,11 @@ getBlocks cfg = map parse (cBlocks cfg)
                       (pX (bjTopRight block) - pX (bjBottomLeft block) + 1)
                       (pY (bjTopRight block) - pY (bjTopRight block) + 1)
 
+getColoredBlocks :: Configuration -> [(BlockId, Shape, Color)]
+getColoredBlocks cfg = map parse (cBlocks cfg)
+  where
+    parse block = (bjId block, shape block, bjColor block)
+    shape block = Rectangle (pX $ bjBottomLeft block) (pY $ bjBottomLeft block)
+                      (pX (bjTopRight block) - pX (bjBottomLeft block) + 1)
+                      (pY (bjTopRight block) - pY (bjTopRight block) + 1)
+
