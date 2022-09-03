@@ -3,7 +3,7 @@ module Types (
     BlockId (..), (+.),
     Color, PixelRGBA8 (..), transparent, white,
     Coordinate,
-    Shape (..),
+    Shape (..), shapeArea,
     SimpleBlock (..),
     ComplexBlock (..),
     ChildBlocks,
@@ -45,6 +45,9 @@ data Shape = Rectangle {
 
 instance Show Shape where
   show r = printf "[(%d,%d), size (%d,%d)]" (rX r) (rY r) (rWidth r) (rHeight r)
+
+shapeArea :: Shape -> Integer
+shapeArea shape = (fromIntegral $ rWidth shape) * (fromIntegral $ rHeight shape)
 
 data SimpleBlock = SimpleBlock {
     sBlockId :: !BlockId
