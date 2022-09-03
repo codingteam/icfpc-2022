@@ -4,12 +4,14 @@ module DummySolver where
 import Control.Monad
 import Control.Monad.State
 import qualified Data.Map as M
+import Data.Maybe (mapMaybe)
 import Codec.Picture.Types
 
-import PNG (readPng, readPngImage, calcAvgColor)
+import PNG (readPng, readPngImage, calcAvgColor, subImage)
 import Types
 import AST
 import Interpreter
+import Evaluator
 
 type ProgramM a = State Program a
 
@@ -102,6 +104,44 @@ drawPngAverageQuads path levels = do
   let rootShape = Rectangle 0 0 (imageWidth img) (imageHeight img)
       root = Left $ SimpleBlock (BlockId [0]) rootShape white
       (quads, cuts) = runState (cutToQuads levels root) []
-      paints = [SetColor quad (calcAvgColor img (blockShape quad)) | quad <- quads]
+      mkCommand quad =
+        let color = calcAvgColor img (blockShape quad)
+        in  if color == white
+              then Nothing
+              else Just $ SetColor quad color
+      paints = mapMaybe mkCommand quads
   return $ reverse cuts ++ paints
+
+solveRecursiveP :: Image PixelRGBA8 -> Block -> ProgramM [Block]
+solveRecursiveP img block = do
+  if rWidth (blockShape block) <= 50 || rHeight (blockShape block) <= 50
+    then do
+         let color = calcAvgColor img (blockShape block)
+         putMove $ SetColor block color
+         return [block]
+    else do
+         let shape = blockShape block
+             middleX = rX shape + (rWidth shape `div` 2)
+             middleY = rY shape + (rHeight shape `div` 2)
+             mid = Point middleX middleY
+             children = cutPoint block (Point middleX middleY)
+             commonAvgColor = calcAvgColor img shape
+             commonRho = imagePartDeviation (subImage img shape) commonAvgColor
+             subAvgColors = [calcAvgColor img (blockShape child) | child <- children]
+             subRhos = [imagePartDeviation (subImage img (blockShape child)) avg | (child, avg) <- zip children subAvgColors]
+         if sum subRhos < commonRho
+           then do
+                putMove $ PointCut block mid
+                concat <$> mapM (solveRecursiveP img) children
+           else do
+                putMove $ SetColor block commonAvgColor
+                return [block]
+         
+solveRecursive :: FilePath -> IO Program
+solveRecursive path = do
+  img <- readPngImage path
+  let rootShape = Rectangle 0 0 (imageWidth img) (imageHeight img)
+      root = Left $ SimpleBlock (BlockId [0]) rootShape white
+      (_, program) = runState (solveRecursiveP img root) []
+  return $ reverse program
 

@@ -3,6 +3,8 @@
 module PNG where
 
 import qualified Data.ByteString as B
+import qualified Data.Vector as V
+import qualified Data.Vector.Storable as VS
 
 import Codec.Picture.Types
 import Codec.Picture.Png (decodePng)
@@ -31,6 +33,22 @@ pixelPlus (PixelRGBAF r1 g1 b1 a1) (PixelRGBA8 r2 g2 b2 a2) =
 
 pixelToFloat :: PixelRGBA8 -> PixelRGBAF
 pixelToFloat (PixelRGBA8 r g b a) = PixelRGBAF (fromIntegral r) (fromIntegral g) (fromIntegral b) (fromIntegral a)
+
+subImage :: Image PixelRGBA8 -> Shape -> Image PixelRGBA8
+subImage img shape = Image (rWidth shape) (rHeight shape) subData
+  where
+    p = 4
+    w = imageWidth img
+    h = imageHeight img
+    w' = rWidth shape
+    h' = rHeight shape
+    x = rX shape
+    y = h - rY shape
+    vector = imageData img
+    imageLines = V.fromList [VS.convert $ VS.slice (w*p*i) (w*p) vector | i <- [0 .. h-1]]
+    lines = V.slice (y - h') h' imageLines
+    subLines = V.map (V.slice (p*x) (p*w')) lines
+    subData = VS.convert $ V.concat (V.toList subLines)
 
 calcAvgColor :: Image PixelRGBA8 -> Shape -> Color
 calcAvgColor img shape =

@@ -45,3 +45,13 @@ imageSimilarity img1 img2 =
       alpha = 0.005
   in  round $ alpha * sumDistance
 
+imagePartDeviation :: Image PixelRGBA8 -> Color -> Float
+imagePartDeviation img (PixelRGBA8 tR tG tB tA) =
+  let targetV = V.fromList [tR, tG, tB, tA]
+      vector = imageToVector img
+      diff = V.map (V.zipWith (-) targetV) vector
+      diffF = V.map (V.map fromIntegral) diff :: V.Vector (V.Vector Float)
+      pixelDistances = V.map (sqrt . V.sum . V.map sqr) diffF
+      sumDistance = V.sum pixelDistances
+  in sumDistance
+
