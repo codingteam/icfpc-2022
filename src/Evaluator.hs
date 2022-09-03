@@ -1,13 +1,16 @@
+{-# LANGUAGE ScopedTypeVariables, FlexibleContexts #-}
 
 module Evaluator where
 
 import qualified Data.Vector.Storable as VS
 import qualified Data.Vector as V
 import Codec.Picture.Types
+import Data.Array.Repa hiding (Shape, map, zipWith)
+import qualified Data.Array.Repa as R
 
 import Types
 import Util
-import PNG (pixelToFloat, pixelDiff, PixelRGBAF (..), subImage)
+import PNG
 
 type Cost = Int
 
@@ -41,7 +44,7 @@ imageToVectorF img =
       [redF, greenF, blueF, alphaF] = map (V.map fromIntegral) [red, green, blue, alpha]
   in  V.zipWith4 (\r g b a -> V.fromList [r,g,b,a]) redF greenF blueF alphaF
 
-sqr :: Double -> Double
+sqr :: Num a => a -> a
 sqr x = x*x
 
 imageSimilarity :: Image PixelRGBA8 -> Image PixelRGBA8 -> Cost
@@ -76,4 +79,19 @@ imageDeviation img target@(PixelRGBA8 tR tG tB tA) =
 
 imagePartDeviation :: Image PixelRGBA8 -> Shape -> Color -> Float
 imagePartDeviation img shape target = imageDeviation (subImage img shape) target
+
+imageDeviationR :: forall r. Source r Pixel8 => ImageArray r -> Color -> Float
+imageDeviationR img target =
+  let (width, height) = arraySize img
+      PixelRGBAF tR tG tB tA = pixelToFloat target
+      targetV :: FloatArray D
+      targetV = fromFunction (ix3 width height 4) $ \ix -> [tR, tG, tB, tA] !! (listOfShape ix !! 2)
+      imgF = R.map fromIntegral img :: FloatArray D
+      distances2 = R.map sqrt $ R.sumS $ R.map sqr $ R.zipWith (-) targetV imgF :: Array D DIM2 Float
+      distance = R.sumAllS distances2 :: Float
+  in  distance
+
+imagePartDeviationR :: Source r Pixel8 => ImageArray r -> Shape -> Color -> Float
+imagePartDeviationR img shape target =
+  imageDeviationR (subArray img shape) target
 

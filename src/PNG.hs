@@ -1,10 +1,15 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, FlexibleContexts #-}
 
 module PNG where
 
 import qualified Data.ByteString as B
 import qualified Data.Vector as V
 import qualified Data.Vector.Storable as VS
+import qualified Data.Vector.Unboxed as VU
+import Data.Array.Repa hiding (Shape, map)
+import qualified Data.Array.Repa as R
+import Data.Array.Repa.Operators.IndexSpace (extract)
+import Data.Array.Repa.Index (ix3)
 
 import Codec.Picture.Types
 import Codec.Picture.Png (decodePng)
@@ -123,4 +128,34 @@ calcAvgColorFromIntegral img shape =
         (avgR, avgG, avgB, avgA) = (fromIntegral sumR / size, fromIntegral sumG / size, fromIntegral sumB / size, fromIntegral sumA / size)
         colorAvg = PixelRGBA8 (round avgR) (round avgG) (round avgB) 255
     in colorAvg
+
+type ImageArray r = Array r DIM3 Pixel8
+type FloatArray r = Array r DIM3 Float
+
+arraySize :: (VU.Unbox a, Source r a) => Array r DIM3 a -> (Coordinate, Coordinate)
+arraySize arr =
+  let [w,h,p] = listOfShape $ extent arr
+  in  (w, h)
+
+imageToArray :: Image PixelRGBA8 -> Array U DIM3 Pixel8
+imageToArray img = fromListUnboxed (Z :. imageWidth img :. imageHeight img :. (4 :: Int)) (VS.toList $ imageData img)
+
+subArray :: Source r Pixel8 => ImageArray r -> Shape -> ImageArray D
+subArray img shape = extract (ix3 x y 0) (ix3 w h 4) img
+  where
+    x = rX shape
+    y = rY shape
+    w = rWidth shape
+    h = rHeight shape
+
+calcAvgColorR :: Source r Pixel8 => ImageArray r -> Shape -> Color
+calcAvgColorR img shape =
+  let img' = subArray img shape
+      (width, height) = arraySize img'
+      imgF = R.map fromIntegral img' :: Array D DIM3 Float
+      sumPx = R.delay $ R.sumS $ R.transpose $ R.sumS $ R.transpose imgF
+      avgPx = R.map (/ fromIntegral (width*height)) sumPx
+      [avgR, avgG, avgB, avgA] = [avgPx ! (ix1 i) | i <- [0..3]]
+  in  PixelRGBA8 (round avgR) (round avgG) (round avgB) (round avgA)
+
 

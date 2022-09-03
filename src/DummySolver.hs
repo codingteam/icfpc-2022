@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 
 module DummySolver where
 
@@ -7,9 +8,10 @@ import qualified Data.Map as M
 import Data.Maybe (mapMaybe)
 import Data.List (minimumBy)
 import Data.Function (on)
+import Data.Array.Repa (Source)
 import Codec.Picture.Types
 
-import PNG (readPng, readPngImage, calcAvgColor, subImage)
+import PNG
 import Types
 import AST
 import Interpreter
@@ -103,12 +105,13 @@ drawPngAvgQuadsColor path = do
 drawPngQuadsSearch :: FilePath -> IO Program
 drawPngQuadsSearch path = do
   img <- readPngImage path
+  let imgArr = imageToArray img
   let rootShape = Rectangle 0 0 (imageWidth img) (imageHeight img)
       root = Left $ SimpleBlock (createBlockId 0) rootShape white
       checkPoint p =
         let quads = cutPoint root p
-            subAvgColors = [calcAvgColor img (blockShape quad) | quad <- quads]
-            subRhos = [imagePartDeviation img (blockShape quad) avg | (quad, avg) <- zip quads subAvgColors]
+            subAvgColors = [calcAvgColorR imgArr (blockShape quad) | quad <- quads]
+            subRhos = [imagePartDeviationR imgArr (blockShape quad) avg | (quad, avg) <- zip quads subAvgColors]
         in  (p, sum subRhos, quads, subAvgColors)
       allPoints = [Point x y | x <- [1, 11 .. imageWidth img - 2], y <- [1, 11 .. imageHeight img - 2]]
       checkResults = map checkPoint allPoints
@@ -133,11 +136,11 @@ drawPngAverageQuads path reset levels = do
       initPaint = if reset then [SetColor root white] else []
   return $ initPaint ++ reverse cuts ++ paints
 
-solveRecursiveP :: Image PixelRGBA8 -> Block -> ProgramM [Block]
+solveRecursiveP :: Source r Pixel8 => ImageArray r -> Block -> ProgramM [Block]
 solveRecursiveP img block = do
   if rWidth (blockShape block) <= 50 || rHeight (blockShape block) <= 50
     then do
-         let color = calcAvgColor img (blockShape block)
+         let color = calcAvgColorR img (blockShape block)
          putMove $ SetColor block color
          return [block]
     else do
@@ -146,10 +149,10 @@ solveRecursiveP img block = do
              middleY = rY shape + (rHeight shape `div` 2)
              mid = Point middleX middleY
              children = cutPoint block (Point middleX middleY)
-             commonAvgColor = calcAvgColor img shape
-             commonRho = imagePartDeviation img shape commonAvgColor
-             subAvgColors = [calcAvgColor img (blockShape child) | child <- children]
-             subRhos = [imagePartDeviation img (blockShape child) avg | (child, avg) <- zip children subAvgColors]
+             commonAvgColor = calcAvgColorR img shape
+             commonRho = imagePartDeviationR img shape commonAvgColor
+             subAvgColors = [calcAvgColorR img (blockShape child) | child <- children]
+             subRhos = [imagePartDeviationR img (blockShape child) avg | (child, avg) <- zip children subAvgColors]
          if sum subRhos < commonRho
            then do
                 putMove $ PointCut block mid
@@ -161,8 +164,9 @@ solveRecursiveP img block = do
 solveRecursive :: FilePath -> IO Program
 solveRecursive path = do
   img <- readPngImage path
+  let imgArr = imageToArray img
   let rootShape = Rectangle 0 0 (imageWidth img) (imageHeight img)
       root = Left $ SimpleBlock (createBlockId 0) rootShape white
-      (_, program) = runState (solveRecursiveP img root) []
+      (_, program) = runState (solveRecursiveP imgArr root) []
   return $ reverse program
 

@@ -37,6 +37,7 @@ dependencies:
 - JuicyPixels
 - JuicyPixels-extra
 - deepseq
+- repa
 
 ghc-options:
 - -Wall

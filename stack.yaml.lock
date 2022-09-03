@@ -3,11 +3,17 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages: []
+packages:
+- completed:
+    hackage: repa-3.4.1.5@sha256:4d94845e66d668345130f75f5de8f7c69139b91495c8c4b5a825014e8985e2fd,3562
+    pantry-tree:
+      size: 2965
+      sha256: 1bb5ad1decd581b0d44b0e05cbdef5eb7967cdd80da481a06c3aab73e16087b9
+  original:
+    hackage: repa-3.4.1.5
 snapshots:
 - completed:
-    size: 619391
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/19/21.yaml
-    sha256: fe8926aaa3f05bb1a0a82551d2e221f267726fe73ac369d74f7b909d45b92fba
-  original:
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/19/21.yaml
+    size: 590100
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/28.yaml
+    sha256: 428ec8d5ce932190d3cbe266b9eb3c175cd81e984babf876b64019e2cbe4ea68
+  original: lts-18.28
