@@ -64,3 +64,50 @@ calcAvgColor img shape =
       colorAvg = PixelRGBA8 (round avgR) (round avgG) (round avgB) 255
   in colorAvg
 
+data PixelRGBA = PixelRGBA{ r :: !Integer, g :: !Integer, b :: !Integer, a :: !Integer}
+
+pxAdd :: PixelRGBA -> PixelRGBA -> PixelRGBA
+pxAdd p1 p2 = PixelRGBA (r p1 + r p2) (g p1 + g p2) (b p1 + b p2) (a p1 + a p2)
+pxSub:: PixelRGBA -> PixelRGBA -> PixelRGBA
+pxSub p1 p2 = PixelRGBA (r p1 - r p2) (g p1 - g p2) (b p1 - b p2) (a p1 - a p2)
+
+data IntegralImageRGBA = IntegralImageRGBA{
+  width :: Int,
+  height :: Int,
+  pixels :: V.Vector PixelRGBA
+}
+
+makeIntegralImage :: Image PixelRGBA8 -> IntegralImageRGBA
+makeIntegralImage src = IntegralImageRGBA (srcWidth + 1) (srcHeight + 1) pixels
+  where
+    pixels = V.fromList $ concat $ integralRows
+    srcWidth = imageWidth src
+    srcHeight = imageHeight src
+    addRows r1 r2 = map (uncurry pxAdd) $ zip r1 r2
+    integralRows = makeIntegral (addRows) zeroRow (map (makeIntegral (pxAdd) zeroPixel ) imgRows)
+    zeroPixel = PixelRGBA 0 0 0 0
+    zeroRow = [zeroPixel | _i <- [0..srcWidth]]
+    imgRows = [getImgRow i | i <- [0..srcHeight - 1]]
+    getImgRow j = [px i j | i <- [0..srcWidth - 1]]
+      where
+        px i j = let PixelRGBA8 r g b a = pixelAt src i j in PixelRGBA (toInteger r) (toInteger g) (toInteger b) (toInteger a)
+    makeIntegral add zero xs = [x i | i <- [0..length xs]]
+      where
+        x 0 = zero
+        x i = add (x (i - 1)) (xs !! (i - 1))
+
+getPixel :: IntegralImageRGBA -> Int -> Int -> PixelRGBA
+getPixel img x y = pixels img V.! (y * width img + x)
+
+calcAvgColorFromIntegral :: IntegralImageRGBA -> Shape -> Color
+calcAvgColorFromIntegral img shape =
+    let pxA = getPixel img (rX shape) (rY shape)
+        pxB = getPixel img (rX shape + rWidth shape) (rY shape)
+        pxC = getPixel img (rX shape) (rY shape + rHeight shape)
+        pxD = getPixel img (rX shape + rWidth shape) (rY shape + rHeight shape)
+        PixelRGBA sumR sumG sumB sumA = pxSub (pxAdd pxA pxD) (pxAdd pxB pxC)
+        size = fromIntegral (rWidth shape * rHeight shape) :: Float
+        (avgR, avgG, avgB, avgA) = (fromIntegral sumR / size, fromIntegral sumG / size, fromIntegral sumB / size, fromIntegral sumA / size)
+        colorAvg = PixelRGBA8 (round avgR) (round avgG) (round avgB) 255
+    in colorAvg
+
