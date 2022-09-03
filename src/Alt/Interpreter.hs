@@ -102,7 +102,7 @@ interpretMove (SetColor bId color) = modify' $ \is ->
               forM_ [rX .. (rX + rWidth - 1)] $ \x -> do
                 writePixel img x y color
 
-            freezeImage img
+            unsafeFreezeImage img
           cost = calculateMoveCost image 5 shape
       in image' `deepseq` cost `deepseq` is { isImage = image', isCost = cost + isCost is }
 interpretMove (Swap bId1 bId2) = modify' $ \is ->
