@@ -2,6 +2,9 @@
 
 module Alt.Interpreter where
 
+import Debug.Trace
+import Text.Printf
+
 import Codec.Picture.Types
 import Control.DeepSeq (deepseq, force)
 import Control.Monad
@@ -37,7 +40,12 @@ initialState (width, height) =
       }
 
 interpretProgram :: Program -> InterpretM ()
-interpretProgram p = forM_ p interpretMove
+interpretProgram p = do
+  let programLength = length p
+  forM_ (zip ([1..]::[Integer]) p) $ \(i, move) -> do
+    let percentage = (fromIntegral $ 100 * i) / (fromIntegral programLength :: Double)
+    let message = printf "%3.0f%% (%9i / %9i)" percentage i programLength
+    interpretMove $ trace message move
 
 interpretMove :: Move -> InterpretM ()
 interpretMove (PointCut bId (Point x y)) = modify' $ \is ->
