@@ -30,7 +30,6 @@ drawBySpiral block currentImage = do
 
 drawPng :: FilePath -> IO Program
 drawPng path = do
-  putStrLn "Hellow"
   (width, height, picture) <- readPng path
   let root = Left $ SimpleBlock (createBlockId 0) (Rectangle 0 0 (width-1) (height-1)) white
   let (_, program) = runState (drawBySpiral root picture) []
