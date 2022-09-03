@@ -40,6 +40,7 @@ initialState' (width, height) blocks =
 initialState :: (Coordinate, Coordinate) -> InterpreterState
 initialState size@(width,height) = initialState' size [(createBlockId 0, Rectangle 0 0 width height)]
 
+-- FIXME :: this does not fill image in the state from configuration!
 initialStateFromJson :: Configuration -> InterpreterState
 initialStateFromJson cfg = initialState' (cWidth cfg, cHeight cfg) (getBlocks cfg)
 
