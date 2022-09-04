@@ -81,9 +81,8 @@ main = do
         program <- runSolverM cfgPath imgPath paintWithAvgColorsMerged
         TIO.putStr $ Alt.Printer.printProgram program
 
-    ["billboard", path] -> do
-        image <- readPngImage path
-        let program = Alt.Solver.Billboard.solve image
+    ["billboard", imgPath] -> do
+        program <- runSolverSimpleM imgPath Alt.Solver.Billboard.solve
         TIO.putStr $ Alt.Printer.printProgram program
 
     -- TODO: properly parse optional arguments
