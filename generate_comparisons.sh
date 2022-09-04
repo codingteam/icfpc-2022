@@ -9,10 +9,11 @@ get_solution_cost() {
     problem=$1
     solution=$2
 
-    stack run -- evaluateSolution $problem $solution
+    "$icfpc2022exe" evaluateSolution $problem $solution
 }
 
 stack build
+icfpc2022exe=$(stack path --local-install-root)/bin/icfpc2022-exe
 
 if [ $# -eq 0 ]; then
     set -- $(seq 1 30)
@@ -26,5 +27,5 @@ do
     comparison="solutions/${problem_no}.png"
     echo "Generating a comparison image for problem ${problem_no}..."
     [ -f "$config" ] || config=""
-    stack run -- evaluateSolution "$problem" "$solution" "$comparison" $config
+    "$icfpc2022exe" evaluateSolution "$problem" "$solution" "$comparison" $config
 done
