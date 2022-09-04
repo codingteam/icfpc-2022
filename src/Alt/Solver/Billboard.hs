@@ -165,8 +165,17 @@ mergeAllBlocks cfg = do
           newBlock <- tryMerge lhs rhs
           return (lhs, rhs, newBlock)
 
+        let blockArea block =
+              (pX (bjTopRight block) - pX (bjBottomLeft block))
+              * (pY (bjTopRight block) - pY (bjBottomLeft block))
+        let largestArgument (la1, la2, _) (ra1, ra2, _) =
+              compare
+                -- The order is swapped here, because we want the solution with
+                -- largest area to come first after the sort
+                (maximum [blockArea ra1, blockArea ra2])
+                (maximum [blockArea la1, blockArea la2])
         let (removed1, removed2, Just added) =
-              case filter (\(_, _, i) -> isJust i) triples of
+              case sortBy largestArgument $ filter (\(_, _, i) -> isJust i) triples of
                 (h:_t) -> h
                 [] -> error $ "No Just values in here: " ++ (show triples)
         issueMove $ Merge (bjId removed1) (bjId removed2)
