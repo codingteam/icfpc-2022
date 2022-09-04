@@ -313,7 +313,7 @@ paintByQuadsSearchBillboard img = do
   issueMove $ PointCut blockId middle
   let initQuads = [blockId +. i | i <- [0..3]]
   forM_ initQuads $ \quadId -> do
-    trace (printf "Search quad %s" (show quadId)) $ return ()
+    -- trace (printf "Search quad %s" (show quadId)) $ return ()
     quad <- lift $ getBlock quadId
     Billboard.solveInside img (quadId, quad)
 
