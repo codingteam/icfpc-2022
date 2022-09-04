@@ -10,6 +10,7 @@ import Control.DeepSeq (deepseq, force)
 import Control.Monad
 import Control.Monad.ST (ST, runST)
 import Control.Monad.State
+import Data.Maybe
 import qualified Data.HashMap.Strict as HMS
 
 import Alt.AST
@@ -22,12 +23,13 @@ data InterpreterState = InterpreterState {
   , isBlocks :: HMS.HashMap BlockId Shape
   , isImage :: Image PixelRGBA8
   , isCost :: !Integer
+  , isMoveCostFn :: Move -> Integer
   }
 
 type InterpretM a = State InterpreterState a
 
-initialState' :: (Coordinate, Coordinate) -> [(BlockId, Shape)] -> InterpreterState
-initialState' (width, height) blocks =
+initialState' :: (Coordinate, Coordinate) -> [(BlockId, Shape)] -> (Move -> Integer) -> InterpreterState
+initialState' (width, height) blocks moveCostFn =
   let whitePixel = PixelRGBA8 255 255 255 255
       image = runST $ do
         img <- createMutableImage width height whitePixel
@@ -37,16 +39,18 @@ initialState' (width, height) blocks =
       , isBlocks = HMS.fromList blocks
       , isImage = image
       , isCost = 0
+      , isMoveCostFn = moveCostFn
       }
 
 -- | Given canvas dimensions, create the initial state.
 initialState :: (Coordinate, Coordinate) -> InterpreterState
-initialState size@(width,height) = initialState' size [(createBlockId 0, Rectangle 0 0 width height)]
+initialState size@(width,height) = initialState' size [(createBlockId 0, Rectangle 0 0 width height)] oldMoveCostFn
 
 -- FIXME :: this does not fill image in the state from configuration!
 initialStateFromJson :: Configuration -> InterpreterState
 initialStateFromJson cfg =
-  let st0 = (initialState' (cWidth cfg, cHeight cfg) (getBlocks cfg)) {isLastBlockId = length (cBlocks cfg)-1}
+  let moveCostFn = if (isJust $ cSourcePngJson cfg) then newMoveCostFn else oldMoveCostFn
+      st0 = (initialState' (cWidth cfg, cHeight cfg) (getBlocks cfg) moveCostFn) {isLastBlockId = length (cBlocks cfg)-1}
       st1 = execState (renderConfiguration cfg) st0
   in  st0 {isImage = isImage st1}
 
@@ -64,14 +68,14 @@ interpretProgram :: Program -> InterpretM ()
 interpretProgram p = forM_ p interpretMove
 
 interpretMove :: Move -> InterpretM ()
-interpretMove (PointCut bId point) = interpretPointCut bId point
-interpretMove (LineCut bId orientation y) = interpretLineCut bId orientation y
-interpretMove (SetColor bId color) = interpretSetColor bId color
-interpretMove (Swap bId1 bId2) = interpretSwap bId1 bId2
-interpretMove (Merge bId1 bId2) = interpretMerge bId1 bId2
+interpretMove move@(PointCut bId point) = getMoveCost move >>= interpretPointCut bId point
+interpretMove move@(LineCut bId orientation y) = getMoveCost move >>= interpretLineCut bId orientation y
+interpretMove move@(SetColor bId color) = getMoveCost move >>= interpretSetColor bId color
+interpretMove move@(Swap bId1 bId2) = getMoveCost move >>= interpretSwap bId1 bId2
+interpretMove move@(Merge bId1 bId2) = getMoveCost move >>= interpretMerge bId1 bId2
 
-interpretPointCut :: BlockId -> Point -> InterpretM ()
-interpretPointCut bId (Point x y) = do
+interpretPointCut :: BlockId -> Point -> Integer -> InterpretM ()
+interpretPointCut bId (Point x y) moveBaseCost = do
   parent <- getBlock bId
   let dx = x - rX parent
   let dy = y - rY parent
@@ -85,10 +89,10 @@ interpretPointCut bId (Point x y) = do
   insertOrUpdateBlock (bId +. 2) topRight
   insertOrUpdateBlock (bId +. 3) topLeft
   deleteBlock bId
-  increaseCost 10 parent
+  increaseCost moveBaseCost parent
 
-interpretLineCut :: BlockId -> Orientation -> Coordinate -> InterpretM ()
-interpretLineCut bId Horizontal y = do
+interpretLineCut :: BlockId -> Orientation -> Coordinate -> Integer -> InterpretM ()
+interpretLineCut bId Horizontal y moveBaseCost = do
   parent <- getBlock bId
   let dy = y - rY parent
   let top = Rectangle (rX parent) (rY parent + dy) (rWidth parent) (rHeight parent - dy)
@@ -97,8 +101,8 @@ interpretLineCut bId Horizontal y = do
   insertOrUpdateBlock (bId +. 0) bottom
   insertOrUpdateBlock (bId +. 1) top
   deleteBlock bId
-  increaseCost 7 parent
-interpretLineCut bId Vertical x = do
+  increaseCost moveBaseCost parent
+interpretLineCut bId Vertical x moveBaseCost = do
   parent <- getBlock bId
   let dx = x - rX parent
   let left = Rectangle (rX parent) (rY parent) dx (rHeight parent)
@@ -107,7 +111,7 @@ interpretLineCut bId Vertical x = do
   insertOrUpdateBlock (bId +. 0) left
   insertOrUpdateBlock (bId +. 1) right
   deleteBlock bId
-  increaseCost 7 parent
+  increaseCost moveBaseCost parent
 
 fillBlock :: BlockId -> Color -> InterpretM ()
 fillBlock bId color = do
@@ -123,14 +127,14 @@ fillBlock bId color = do
 
     unsafeFreezeImage img
 
-interpretSetColor :: BlockId -> Color -> InterpretM ()
-interpretSetColor bId color = do
+interpretSetColor :: BlockId -> Color -> Integer -> InterpretM ()
+interpretSetColor bId color moveBaseCost = do
   shape <- getBlock bId
   fillBlock bId color
-  increaseCost 5 shape
+  increaseCost moveBaseCost shape
 
-interpretSwap :: BlockId -> BlockId -> InterpretM ()
-interpretSwap bId1 bId2 = do
+interpretSwap :: BlockId -> BlockId -> Integer -> InterpretM ()
+interpretSwap bId1 bId2 moveBaseCost = do
   shape1 <- getBlock bId1
   shape2 <- getBlock bId2
   withImage $ \image -> do
@@ -142,10 +146,10 @@ interpretSwap bId1 bId2 = do
     freezeImage img
   insertOrUpdateBlock bId1 shape2
   insertOrUpdateBlock bId2 shape1
-  increaseCost 3 shape1
+  increaseCost moveBaseCost shape1
 
-interpretMerge :: BlockId -> BlockId -> InterpretM ()
-interpretMerge bId1 bId2 = do
+interpretMerge :: BlockId -> BlockId -> Integer -> InterpretM ()
+interpretMerge bId1 bId2 moveBaseCost = do
   shape1 <- getBlock bId1
   shape2 <- getBlock bId2
   newBlockId <- getNewBlockId
@@ -161,7 +165,7 @@ interpretMerge bId1 bId2 = do
   -- When two blocks are merged, the cost is calculated by picking the
   -- larger block for computation.
   let largestShape = if shapeArea shape1 > shapeArea shape2 then shape1 else shape2
-  increaseCost 1 largestShape
+  increaseCost moveBaseCost largestShape
 
 -- | Returns a block with given id.
 --
@@ -217,7 +221,8 @@ copyShape srcImage srcShape dstImage dstShape = do
 -- amount.
 increaseCost :: Integer -> Shape -> InterpretM ()
 increaseCost baseCost shape = modify' $ \is ->
-  let cost = calculateMoveCost (isImage is) baseCost shape
+  let
+      cost = calculateMoveCost (isImage is) baseCost shape
   in is { isCost = cost + isCost is }
 
 calculateMoveCost :: Image a -> Integer -> Shape -> Integer
@@ -227,3 +232,22 @@ calculateMoveCost image baseCost shape =
       rhs = shapeArea shape
       fraction = (fromIntegral lhs :: Double) / (fromIntegral rhs)
   in force $ jsRound fraction
+
+getMoveCost :: Move -> InterpretM Integer
+getMoveCost move = do
+  moveCostFn <- gets isMoveCostFn
+  return $ moveCostFn move
+
+oldMoveCostFn :: Move -> Integer
+oldMoveCostFn (PointCut _ _) = 10
+oldMoveCostFn (LineCut _ _ _) = 7
+oldMoveCostFn (SetColor _ _) = 5
+oldMoveCostFn (Swap _ _) = 3
+oldMoveCostFn (Merge _ _) = 1
+
+newMoveCostFn :: Move -> Integer
+newMoveCostFn (PointCut _ _) = 3
+newMoveCostFn (LineCut _ _ _) = 2
+newMoveCostFn (SetColor _ _) = 5
+newMoveCostFn (Swap _ _) = 3
+newMoveCostFn (Merge _ _) = 1

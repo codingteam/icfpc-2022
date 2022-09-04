@@ -18,6 +18,7 @@ data Configuration = Configuration {
       cWidth :: Coordinate
     , cHeight :: Coordinate
     , cBlocks :: [BlockJson]
+    , cSourcePngJson :: Maybe String
   }
   deriving (Show)
 
@@ -30,7 +31,7 @@ data BlockJson = BlockJson {
   deriving (Eq, Ord, Show)
 
 emptyConfiguration :: (Coordinate,Coordinate) -> Configuration
-emptyConfiguration (width, height) = Configuration width height [block]
+emptyConfiguration (width, height) = Configuration width height [block] Nothing
   where
     block = BlockJson {
                 bjId = createBlockId 0
@@ -61,7 +62,7 @@ instance FromJSON BlockJson where
     <$> v .: "blockId"
     <*> v .: "bottomLeft"
     <*> v .: "topRight"
-    <*> v .: "color"
+    <*> v .:? "color" .!= white
   parseJSON invalid = typeMismatch "Block" invalid
 
 instance FromJSON Configuration where
@@ -69,6 +70,7 @@ instance FromJSON Configuration where
     <$> v .: "width"
     <*> v .: "height"
     <*> v .: "blocks"
+    <*> v .:? "sourcePngJSON"
   parseJSON invalid = typeMismatch "Configuration" invalid
 
 parseConfig :: FilePath -> IO Configuration
