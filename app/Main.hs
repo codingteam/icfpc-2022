@@ -16,6 +16,7 @@ import qualified Alt.Printer
 import qualified Alt.Reader as AltReader
 import qualified Alt.Solver.Billboard
 import qualified SpiralSolver
+import qualified Editor
 
 main :: IO ()
 main = do
@@ -24,6 +25,8 @@ main = do
     [path] -> do
       program <- drawPng path
       TIO.putStr $ printProgram program
+
+    ["editor", path] -> Editor.main path
 
     ["spiral", path] -> do
       program <- SpiralSolver.drawPng path

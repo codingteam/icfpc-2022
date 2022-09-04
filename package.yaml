@@ -37,6 +37,8 @@ dependencies:
 - JuicyPixels
 - JuicyPixels-extra
 - deepseq
+- gloss
+- gloss-juicy
 
 ghc-options:
 - -Wall
