@@ -1,6 +1,7 @@
 ﻿using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Skia;
+using GuiEditor.Models;
 using SkiaSharp;
 
 namespace GuiEditor;
@@ -30,4 +31,12 @@ public static class Render
         canvas.DrawImage(sourceImage, 0, 0);
     }
 
+    public static void DrawBlock(ILockedFramebuffer fb, Block block)
+    {
+        var info = new SKImageInfo(fb.Size.Width, fb.Size.Height,
+            fb.Format.ToSkColorType(),SKAlphaType.Premul);
+        using var surface = SKSurface.Create(info, fb.Address, fb.RowBytes);
+        var canvas = surface.Canvas;
+        canvas.DrawRect(block.X, block.Y, block.Width, block.Height, new SKPaint {Color = new SKColor(50, 50, 50, 50)});
+    }
 }

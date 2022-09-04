@@ -3,11 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Avalonia;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
-using Avalonia.Skia;
 using SkiaSharp;
 
 namespace GuiEditor.Models;
@@ -57,6 +55,10 @@ public class Field : IDisposable
     public void Render(ILockedFramebuffer fb)
     {
         GuiEditor.Render.DrawBitmap(fb, CurrentImage);
+        foreach (var block in Blocks)
+        {
+            GuiEditor.Render.DrawBlock(fb, block);
+        }
     }
 
     public void Dispose()

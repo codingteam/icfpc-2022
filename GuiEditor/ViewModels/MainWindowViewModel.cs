@@ -6,10 +6,8 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
-using Avalonia.Skia;
 using GuiEditor.Models;
 using JetBrains.Annotations;
-using SkiaSharp;
 
 namespace GuiEditor.ViewModels;
 
@@ -78,7 +76,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
         var bmp = _field.CurrentImage;
         using (Bitmap) Bitmap = new WriteableBitmap(bmp.PixelSize, bmp.Dpi, PixelFormat.Bgra8888, AlphaFormat.Opaque);
         using var fb = Bitmap.Lock();
-        Render.DrawBitmap(fb, bmp);
+        _field.Render(fb);
     }
 
     public void CutHorizontal()
