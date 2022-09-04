@@ -86,6 +86,12 @@ main = do
         program <- runSolverM cfgPath imgPath (paintWithAvgColorsMerged tolerance)
         TIO.putStr $ Alt.Printer.printProgram program
 
+    ["repaintQuadsMerge", cfgPath, imgPath, ls, tol] -> do
+        let tolerance = read tol
+        let level = read ls
+        program <- runSolverM cfgPath imgPath (\cfg -> repaintByQuadsAndMerge level tolerance)
+        TIO.putStr $ Alt.Printer.printProgram program
+
     ["billboard", imgPath] -> do
         program <- runSolverSimpleM imgPath Alt.Solver.Billboard.solve
         TIO.putStr $ Alt.Printer.printProgram program

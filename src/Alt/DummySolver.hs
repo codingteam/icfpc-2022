@@ -58,11 +58,15 @@ findNextBlock ToTop shape = do
   let nextPoint = Point (rX shape) (rY shape + rHeight shape)
   mbNextBlock <- lookupBlockByPos nextPoint
   case mbNextBlock of
-    Nothing -> return Nothing
+    Nothing -> do
+      trace (printf "find: no block at %s" (show nextPoint)) $ return ()
+      return Nothing
     Just (nextBlockId, nextBlock) ->
       if rWidth nextBlock == rWidth shape
         then return $ Just (nextBlockId, nextBlock)
-        else return Nothing
+        else do
+          -- trace (printf "find: bad block: %s" (show nextBlock)) $ return ()
+          return Nothing
 
 mergeShapes :: Direction -> Shape -> Shape -> Shape
 mergeShapes ToRight s1 s2 = mergeShapesHorizontal s1 s2
@@ -157,26 +161,50 @@ tryMergeAll dir tolerance = do
 mergeAreaOneDirection :: Shape -> Direction -> Int -> Color -> SolverM Int
 mergeAreaOneDirection area dir rowNumber color = do
     -- trace (printf "merging area: %s" (show area)) $ return ()
-    mbFirstBlock <- lookupBlockByPos $ Point (rX area) (rY area + rowNumber)
+    mbFirstBlock <- findFirstBlock
     case mbFirstBlock of
       Nothing -> do
         -- trace (printf "first block not found: %s" (show area)) $ return ()
         return 0
       Just (firstBlockId, firstBlock) -> do
+        trace (printf "%s: first block #%s - %s" (show dir) (show rowNumber) (show firstBlock)) $ return ()
         mergeFrom 0 firstBlockId firstBlock
   where
+    findFirstBlock
+      | dir == ToTop = lookupBlockByPos $ Point (rX area) (rY area)
+      | otherwise = do
+        mbFirst <- lookupBlockByPos $ Point (rX area) (rY area)
+        case mbFirst of
+          Nothing -> return Nothing
+          Just (firstBlockId, firstBlock) -> stepUp rowNumber (firstBlockId, firstBlock)
+
+    stepUp :: Int -> (BlockId,Shape) -> SolverM (Maybe (BlockId, Shape))
+    stepUp 0 (blockId,block) = return (Just (blockId,block))
+    stepUp n (_,block) = do
+      mbNext <- findAnyUpperBlock block
+      case mbNext of
+        Just (nextBlockId,nextBlock) -> stepUp (n-1) (nextBlockId,nextBlock)
+        Nothing -> return Nothing
+
+    findAnyUpperBlock block = do
+      let nextPoint = Point (rX block) (rY block + rHeight block)
+      lookupBlockByPos nextPoint
+
     mergeFrom nDone firstBlockId firstBlock = do
       mbNext <- findNextBlock dir firstBlock
       case mbNext of
         Nothing -> return nDone
         Just (nextBlockId, nextBlock) -> do
+          when (dir == ToTop) $
+            trace (printf "next: %s" (show nextBlock)) $ return ()
           let nextStart = Point (rX nextBlock) (rY nextBlock)
           if area `shapeContainsPoint` nextStart
             then do
-              -- trace (printf "area %s, next %s" (show area) (show nextBlock)) $ return ()
+              when (dir == ToTop) $
+                trace (printf "area %s, next %s" (show firstBlock) (show nextBlock)) $ return ()
               removeMerged nextBlockId
               removeMerged firstBlockId
-              -- trace (printf "merge: %s + %s" (show firstBlock) (show nextBlock)) $ return ()
+              trace (printf "merge %s: %s + %s" (show dir) (show firstBlock) (show nextBlock)) $ return ()
               issueMove $ Merge firstBlockId nextBlockId
               id <-lift $ gets isLastBlockId
               let newBlockId = createBlockId id
@@ -198,17 +226,18 @@ mergeAreaRows area color = do
                mergeAreaOneDirection area ToRight rowNumber color
   return $ sum results
 
-mergeAreaOnce :: Shape -> Color -> SolverM Int
-mergeAreaOnce area color = do
-  byRows <- mergeAreaRows area color
-  byColumn <- mergeAreaOneDirection area ToTop 0 color
-  return $ byRows + byColumn
-
-mergeAreaRecursive :: Shape -> Color -> SolverM ()
-mergeAreaRecursive area color = do
-  done <- mergeAreaOnce area color
+mergeAreaRowsRecursive :: Shape -> Color -> SolverM ()
+mergeAreaRowsRecursive area color = do
+  done <- mergeAreaRows area color
   if done > 0
-    then mergeAreaRecursive area color
+    then mergeAreaRowsRecursive area color
+    else return ()
+
+mergeAreaColumnsRecursive :: Shape -> Color -> SolverM ()
+mergeAreaColumnsRecursive area color = do
+  done <- mergeAreaOneDirection area ToTop 0 color
+  if done > 0
+    then mergeAreaColumnsRecursive area color
     else return ()
 
 mergeAllAreas :: SolverM ()
@@ -216,7 +245,8 @@ mergeAllAreas = do
   areas <- gets ssAreasToMerge
   forM_ (M.elems areas) $ \(area,color,_) -> do
     --trace (printf "merging area: %s" (show area)) $ return ()
-    mergeAreaRecursive area color
+    mergeAreaRowsRecursive area color
+    mergeAreaColumnsRecursive area color
 
 paintMergedBlocks :: Pixel8 -> SolverM ()
 paintMergedBlocks tolerance = do
@@ -260,6 +290,23 @@ mergeAll color = do
   modify $ \st -> st {ssAreasToMerge = M.singleton (Point 0 0) (root, color, ToTop)}
   mergeAllAreas
 
+repaintByQuadsAndMerge :: Int -> Pixel8 -> Image PixelRGBA8 -> SolverM ()
+repaintByQuadsAndMerge level tolerance img = do
+  let root = Rectangle 0 0 (imageWidth img) (imageHeight img)
+  let avgColor = calcAvgColor img root
+  mergeAll avgColor
+  modify $ \st -> st {ssAreasToMerge = M.empty}
+  id <-lift $ gets isLastBlockId
+  let blockId = (createBlockId id)
+--   issueMove $ SetColor blockId avgColor
+  -- paintByQuadsAndMerge' level tolerance img blockId
+  cutToQuads level blockId
+  rememberAvgColors img
+  blocksMap <- lift $ gets isBlocks
+  forM_ (HMS.keys blocksMap) $ \blockId -> do
+    color <- getAvgColor blockId
+    issueMove $ SetColor blockId color
+
 cutToQuads :: Int -> BlockId -> SolverM ()
 cutToQuads 0 _ = return ()
 cutToQuads level blockId = do
@@ -274,14 +321,17 @@ cutToQuads level blockId = do
       forM_ children $ \child -> cutToQuads (level-1) child
     else return ()
 
-paintByQuadsAndMerge :: Int -> Pixel8 -> Image PixelRGBA8 -> SolverM ()
-paintByQuadsAndMerge level tolerance img = do
-  cutToQuads level (createBlockId 0)
+paintByQuadsAndMerge' :: Int -> Pixel8 -> Image PixelRGBA8 -> BlockId -> SolverM ()
+paintByQuadsAndMerge' level tolerance img blockId = do
+  cutToQuads level blockId
   rememberAvgColors img
   tryMergeAll ToRight tolerance
   tryMergeAll ToTop tolerance
   mergeAllAreas
   paintMergedBlocks tolerance
+
+paintByQuadsAndMerge :: Int -> Pixel8 -> Image PixelRGBA8 -> SolverM ()
+paintByQuadsAndMerge level tolerance img = paintByQuadsAndMerge' level tolerance img (createBlockId 0)
 
 searchBestCutPoint :: Image PixelRGBA8 -> BlockId -> Shape -> SolverM [BlockId]
 searchBestCutPoint img blockId root = do
