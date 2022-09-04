@@ -53,14 +53,14 @@ avgColorPerColumn image =
         newValues = (accR + fromIntegral r, accG + fromIntegral g, accB + fromIntegral b, accA + fromIntegral a)
     in acc V.// [(x, newValues)]
 
-  sumsToPixel :: Int -> (Integer, Integer, Integer, Integer) -> PixelRGBA8
-  sumsToPixel width (r, g, b, a) =
-    let divide x y = round $ ((fromIntegral x) / (fromIntegral y) :: Double)
-    in PixelRGBA8
-      (r `divide` width)
-      (g `divide` width)
-      (b `divide` width)
-      (a `divide` width)
+sumsToPixel :: Int -> (Integer, Integer, Integer, Integer) -> PixelRGBA8
+sumsToPixel width (r, g, b, a) =
+  let divide x y = round $ ((fromIntegral x) / (fromIntegral y) :: Double)
+  in PixelRGBA8
+    (r `divide` width)
+    (g `divide` width)
+    (b `divide` width)
+    (a `divide` width)
 
 produceProgram :: [PixelRGBA8] -> Program
 produceProgram = go [] (createBlockId 0) 1
@@ -79,13 +79,13 @@ produceProgram = go [] (createBlockId 0) 1
         in go (action2:action1:program) nextBlockId (x+1) (nextColor:avgs)
 
 simplify :: Int -> [PixelRGBA8] -> [PixelRGBA8]
-simplify color_diff_tolerance = go
-  where
-  go [] = []
-  go [c] = [c]
-  go (c1:c2:avgs)
-    | colorDiff c1 c2 < color_diff_tolerance = c1 : go (c1:avgs)
-    | otherwise = c1 : go (c2:avgs)
+simplify _ [] = []
+simplify color_diff_tolerance colors@(x:_) =
+  let (h, t) = span (\c -> colorDiff x c <= color_diff_tolerance) colors
+      avg = averageColor h
+      newHead = replicate (length h) avg
+      newTail = simplify color_diff_tolerance t
+  in newHead ++ newTail
 
 colorDiff :: PixelRGBA8 -> PixelRGBA8 -> Int
 colorDiff (PixelRGBA8 r1 g1 b1 a1) (PixelRGBA8 r2 g2 b2 a2) =
@@ -96,3 +96,13 @@ colorDiff (PixelRGBA8 r1 g1 b1 a1) (PixelRGBA8 r2 g2 b2 a2) =
   $ zipWith (-)
       (map fromIntegral [r1, g1, b1, a1])
       (map fromIntegral [r2, g2, b2, a2])
+
+averageColor :: [PixelRGBA8] -> PixelRGBA8
+averageColor [] = error "averageColor called on empty list!"
+averageColor colors =
+  let sums = foldl' go (0, 0, 0, 0) colors
+  in sumsToPixel (length colors) sums
+  where
+  go :: (Integer, Integer, Integer, Integer) -> PixelRGBA8 -> (Integer, Integer, Integer, Integer)
+  go (accR, accG, accB, accA) (PixelRGBA8 r g b a) =
+    (accR + fromIntegral r, accG + fromIntegral g, accB + fromIntegral b, accA + fromIntegral a)
