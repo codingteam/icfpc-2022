@@ -59,7 +59,7 @@ findNextBlock ToTop shape = do
   mbNextBlock <- lookupBlockByPos nextPoint
   case mbNextBlock of
     Nothing -> do
-      trace (printf "find: no block at %s" (show nextPoint)) $ return ()
+      -- trace (printf "find: no block at %s" (show nextPoint)) $ return ()
       return Nothing
     Just (nextBlockId, nextBlock) ->
       if rWidth nextBlock == rWidth shape
@@ -167,7 +167,7 @@ mergeAreaOneDirection area dir rowNumber color = do
         -- trace (printf "first block not found: %s" (show area)) $ return ()
         return 0
       Just (firstBlockId, firstBlock) -> do
-        trace (printf "%s: first block #%s - %s" (show dir) (show rowNumber) (show firstBlock)) $ return ()
+        -- trace (printf "%s: first block #%s - %s" (show dir) (show rowNumber) (show firstBlock)) $ return ()
         mergeFrom 0 firstBlockId firstBlock
   where
     findFirstBlock
@@ -195,16 +195,16 @@ mergeAreaOneDirection area dir rowNumber color = do
       case mbNext of
         Nothing -> return nDone
         Just (nextBlockId, nextBlock) -> do
-          when (dir == ToTop) $
-            trace (printf "next: %s" (show nextBlock)) $ return ()
+          -- when (dir == ToTop) $
+          --   trace (printf "next: %s" (show nextBlock)) $ return ()
           let nextStart = Point (rX nextBlock) (rY nextBlock)
           if area `shapeContainsPoint` nextStart
             then do
-              when (dir == ToTop) $
-                trace (printf "area %s, next %s" (show firstBlock) (show nextBlock)) $ return ()
+              -- when (dir == ToTop) $
+                -- trace (printf "area %s, next %s" (show firstBlock) (show nextBlock)) $ return ()
               removeMerged nextBlockId
               removeMerged firstBlockId
-              trace (printf "merge %s: %s + %s" (show dir) (show firstBlock) (show nextBlock)) $ return ()
+              -- trace (printf "merge %s: %s + %s" (show dir) (show firstBlock) (show nextBlock)) $ return ()
               issueMove $ Merge firstBlockId nextBlockId
               id <-lift $ gets isLastBlockId
               let newBlockId = createBlockId id
@@ -404,7 +404,7 @@ solveRecursiveAndMerge tolerance img = do
               halfsXRhos = sum [imagePartDeviation img child avg | (child, avg) <- zip halfsX halfsXAvgColors]
               halfsYRhos = sum [imagePartDeviation img child avg | (child, avg) <- zip halfsY halfsYAvgColors]
               minRho = minimum [quadRhos, halfsXRhos, halfsYRhos]
-          trace (printf "common %f, Q %f, X %f, Y %f" commonRho quadRhos halfsXRhos halfsYRhos) $ return ()
+          -- trace (printf "common %f, Q %f, X %f, Y %f" commonRho quadRhos halfsXRhos halfsYRhos) $ return ()
           if minRho >= commonRho
             then return ()
             else if minRho == quadRhos
