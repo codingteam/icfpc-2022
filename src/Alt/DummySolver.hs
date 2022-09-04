@@ -60,6 +60,13 @@ issueMove m = do
   lift $ interpretMove m
   modify $ \st -> st {ssProgram = m : ssProgram st}
 
+colorRho :: Color -> Color -> Pixel8
+colorRho (PixelRGBA8 r1 g1 b1 a1) (PixelRGBA8 r2 g2 b2 a2) =
+  maximum $ map abs [r1-r2, g1-g2, b1-b2, a1-a2]
+
+colorTolerance :: Pixel8
+colorTolerance = 2
+
 paintWithAvgColors :: FilePath -> FilePath -> IO Program
 paintWithAvgColors cfgPath imgPath = do
   img <- readPngImage imgPath
@@ -67,7 +74,7 @@ paintWithAvgColors cfgPath imgPath = do
   let blocksCfg = getColoredBlocks cfg
       paint (blockId, shape, existingColor) =
         let avgColor = calcAvgColor img shape
-        in  if avgColor == existingColor
+        in  if colorRho avgColor existingColor <= colorTolerance
               then Nothing
               else Just $ SetColor blockId avgColor
   return $ mapMaybe paint blocksCfg
@@ -82,8 +89,10 @@ lookupBlockByPos point = do
   blocksByPos <- getBlocksByPos
   return $ M.lookup point blocksByPos
 
-findBlockAtRight :: Shape -> SolverM (Maybe (BlockId, Shape))
-findBlockAtRight shape = do
+data MergeDirection = MergeHorizontal | MergeVertical
+
+findNextBlock :: MergeDirection -> Shape -> SolverM (Maybe (BlockId, Shape))
+findNextBlock MergeHorizontal shape = do
   let nextPoint = Point (rX shape + rWidth shape) (rY shape)
   mbNextBlock <- lookupBlockByPos nextPoint
   case mbNextBlock of
@@ -130,7 +139,7 @@ lookupAreaToBeMerged point = do
 
 tryMergeRight :: Point -> Shape -> Color -> SolverM (Maybe Shape)
 tryMergeRight startPoint block startColor = do
-  mbBlock <- findBlockAtRight block
+  mbBlock <- findNextBlock MergeHorizontal block
   -- trace (printf "find: %s -> %s\n" (show block) (show mbBlock)) $ return ()
   case mbBlock of
     Nothing -> do
@@ -146,7 +155,7 @@ tryMergeRight startPoint block startColor = do
                            Nothing -> return Nothing
                            Just avgColor -> do
                              initColor <- lookupInitialColor nextPoint
-                             if initColor == avgColor
+                             if colorRho initColor avgColor <= colorTolerance
                                then return Nothing
                                else return $ Just avgColor
                        Just mergedColor -> return Nothing
@@ -156,7 +165,7 @@ tryMergeRight startPoint block startColor = do
           return Nothing
         Just nextColor -> do
           -- trace (printf "start block %s, color %s; next block %s, color %s" (show block) (show startColor) (show nextBlockId) (show nextColor)) $ return ()
-          if nextColor == startColor
+          if colorRho nextColor startColor <= colorTolerance
             then do
               mbArea <- lookupAreaToBeMerged $ Point (rX nextBlock) (rY nextBlock)
               case mbArea of
@@ -224,7 +233,7 @@ mergeAreaOnce area color = do
         mergeFrom 0 firstBlockId firstBlock
   where
     mergeFrom nDone firstBlockId firstBlock = do
-      mbNext <- findBlockAtRight firstBlock
+      mbNext <- findNextBlock MergeHorizontal firstBlock
       case mbNext of
         Nothing -> return nDone
         Just (nextBlockId, nextBlock) -> do
@@ -239,7 +248,7 @@ mergeAreaOnce area color = do
               id <-lift $ gets isLastBlockId
               let newBlockId = createBlockId id
               markMerged newBlockId color
-              mbNextFirst <- findBlockAtRight nextBlock
+              mbNextFirst <- findNextBlock MergeHorizontal nextBlock
               case mbNextFirst of
                 Nothing -> return (nDone+1)
                 Just (nextFirstId, nextFirstBlock) -> do
