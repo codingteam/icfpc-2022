@@ -3,6 +3,7 @@ module Alt.DummySolver where
 
 import Control.Monad
 import Control.Monad.State
+import Control.Parallel.Strategies
 import Data.Maybe (mapMaybe)
 import Data.List (minimumBy)
 import Data.Function (on)
@@ -279,8 +280,8 @@ searchBestCutPoint img blockId root = do
   let integralImg = makeIntegralImage img
       checkPoint p =
         let quads = cutPointShape root p
-            subAvgColors = [calcAvgColorFromIntegral integralImg quad | quad <- quads]
-            subRhos = [imagePartDeviation img quad avg | (quad, avg) <- zip quads subAvgColors]
+            subAvgColors = parMap rpar (calcAvgColorFromIntegral integralImg) quads
+            subRhos = parMap rpar (\(quad, avg) -> imagePartDeviation img quad avg) (zip quads subAvgColors)
         in  (p, sum subRhos, quads, subAvgColors)
       step = 10
       allPoints = [Point x y | x <- [rX root + 1, rX root + step + 1 .. rWidth root - 2],
