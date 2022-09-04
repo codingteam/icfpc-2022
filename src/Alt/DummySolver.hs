@@ -275,9 +275,10 @@ paintByQuadsAndMerge level img = do
 
 searchBestCutPoint :: Image PixelRGBA8 -> BlockId -> Shape -> SolverM [BlockId]
 searchBestCutPoint img blockId root = do
-  let checkPoint p =
+  let integralImg = makeIntegralImage img
+      checkPoint p =
         let quads = cutPointShape root p
-            subAvgColors = [calcAvgColor img quad | quad <- quads]
+            subAvgColors = [calcAvgColorFromIntegral integralImg quad | quad <- quads]
             subRhos = [imagePartDeviation img quad avg | (quad, avg) <- zip quads subAvgColors]
         in  (p, sum subRhos, quads, subAvgColors)
       step = 10
@@ -299,6 +300,59 @@ paintByQuadsSearchAndMerge level img = do
   tryMergeAll ToTop
   mergeAllAreas
   paintMergedBlocks
+
+solveRecursiveAndMerge :: Image PixelRGBA8 -> SolverM ()
+solveRecursiveAndMerge img = do
+    let root = Rectangle 0 0 (imageWidth img) (imageHeight img)
+    quads <- searchBestCutPoint img (createBlockId 0) root
+    forM_ quads subdivide
+    rememberAvgColors img
+    tryMergeAll ToRight
+    tryMergeAll ToTop
+    mergeAllAreas
+    paintMergedBlocks
+  where 
+    integralImg = makeIntegralImage img
+
+    subdivide blockId = do
+      block <- lift $ getBlock blockId
+      let commonAvgColor = calcAvgColorFromIntegral integralImg block
+      if rWidth block <= 50 || rHeight block <= 50
+        then return ()
+          -- avgColor <- getAvgColor blockId
+          -- issueMove $ SetColor blockId avgColor
+        else do
+          let middleX = rX block + (rWidth block `div` 2)
+              middleY = rY block + (rHeight block `div` 2)
+              middle = Point middleX middleY
+              quads = cutPointShape block middle
+              halfsX = cutVerticalShape block middleX
+              halfsY = cutHorizontalShape block middleY
+          let commonRho = imagePartDeviation img block commonAvgColor
+              quadsAvgColors = [calcAvgColorFromIntegral integralImg child | child <- quads]
+              quadRhos = sum [imagePartDeviation img child avg | (child, avg) <- zip quads quadsAvgColors]
+              halfsXAvgColors = [calcAvgColorFromIntegral integralImg child | child <- halfsX]
+              halfsYAvgColors = [calcAvgColorFromIntegral integralImg child | child <- halfsY]
+              halfsXRhos = sum [imagePartDeviation img child avg | (child, avg) <- zip halfsX halfsXAvgColors]
+              halfsYRhos = sum [imagePartDeviation img child avg | (child, avg) <- zip halfsY halfsYAvgColors]
+              minRho = minimum [quadRhos, halfsXRhos, halfsYRhos]
+          trace (printf "common %f, Q %f, X %f, Y %f" commonRho quadRhos halfsXRhos halfsYRhos) $ return ()
+          if minRho >= commonRho
+            then return ()
+            else if minRho == quadRhos
+                   then do
+                     issueMove $ PointCut blockId middle
+                     let childBlockIds = [blockId +. i | i <- [0..3]]
+                     forM_ childBlockIds $ \child -> subdivide child
+                   else if minRho == halfsYRhos
+                          then do
+                            issueMove $ LineCut blockId Horizontal middleY
+                            let childBlockIds = [blockId +. i | i <- [0,1]]
+                            forM_ childBlockIds $ \child -> subdivide child
+                          else do
+                            issueMove $ LineCut blockId Vertical middleX
+                            let childBlockIds = [blockId +. i | i <- [0,1]]
+                            forM_ childBlockIds $ \child -> subdivide child
 
 checkSwap :: BlockId -> SolverM Bool
 checkSwap blockId = do

@@ -69,6 +69,10 @@ main = do
         program <- solveRecursive path
         TIO.putStr $ printProgram program
 
+    ["recursiveMerge", path] -> do
+        program <- runSolverSimpleM path solveRecursiveAndMerge
+        TIO.putStr $ Alt.Printer.printProgram program
+
     ["dumbFromInitial", cfgPath, imgPath] -> do
         program <- paintWithAvgColors cfgPath imgPath
         TIO.putStr $ Alt.Printer.printProgram program
