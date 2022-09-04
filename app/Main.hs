@@ -6,6 +6,7 @@ import System.Environment
 import qualified Data.Text.IO as TIO
 
 import Alt.DummySolver
+import Alt.SolverM
 import DummySolver
 import Json (parseConfig)
 import PNG
