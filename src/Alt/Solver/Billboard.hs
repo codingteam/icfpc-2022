@@ -20,10 +20,11 @@ import qualified Data.Vector as V
 
 import Alt.AST
 import Alt.Evaluator
+import Alt.SolverM
 import Types
 import Util
 
-solve :: Image PixelRGBA8 -> Program
+solve :: Image PixelRGBA8 -> SolverM ()
 solve problem =
   let avgs = avgColorPerColumn problem
       dumbified_avgs =
@@ -37,7 +38,7 @@ solve problem =
           programs
           (parMap rpar (\program -> evaluateProgram problem program Nothing) programs)
       best = minimumBy (\(_, r1) (_, r2) -> compare (erCost r1) (erCost r2)) results
-  in fst best
+  in mapM_ issueMove $ fst best
 
 avgColorPerColumn :: Image PixelRGBA8 -> V.Vector PixelRGBA8
 avgColorPerColumn image =
