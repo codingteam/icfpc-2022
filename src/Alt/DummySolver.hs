@@ -262,11 +262,19 @@ mergeAllAreas = do
   forM_ (M.elems areas) $ \(area,color) ->
     mergeAreaRecursive area color
 
+calcInitialAvgColor :: BlockId -> SolverM Color
+calcInitialAvgColor blockId = do
+  block <- lift $ getBlock blockId
+  cfg <- gets ssConfiguration
+  return $ calcAvgColorFromConfig cfg block
+
 paintMergedBlocks :: SolverM ()
 paintMergedBlocks = do
   merged <- gets ssMergedBlocks
-  forM_ (M.toList merged) $ \(blockId, color) ->
-    issueMove $ SetColor blockId color
+  forM_ (M.toList merged) $ \(blockId, color) -> do
+    initColor <- calcInitialAvgColor blockId
+    when (initColor /= color) $
+      issueMove $ SetColor blockId color
   blocksMap <- lift $ gets isBlocks
   let unmergedIds = filter (`M.notMember` merged) (HMS.keys blocksMap)
   forM_ unmergedIds $ \blockId -> do
@@ -275,7 +283,9 @@ paintMergedBlocks = do
     case mbColor of
       Nothing -> return ()
       Just color -> do
-        issueMove $ SetColor blockId color
+        initColor <- calcInitialAvgColor blockId
+        when (initColor /= color) $
+          issueMove $ SetColor blockId color
 
 rememberAvgColors :: Image PixelRGBA8 -> SolverM ()
 rememberAvgColors img = do
