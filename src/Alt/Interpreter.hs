@@ -57,7 +57,14 @@ interpretProgram :: Program -> InterpretM ()
 interpretProgram p = forM_ p interpretMove
 
 interpretMove :: Move -> InterpretM ()
-interpretMove (PointCut bId (Point x y)) = do
+interpretMove (PointCut bId point) = interpretPointCut bId point
+interpretMove (LineCut bId orientation y) = interpretLineCut bId orientation y
+interpretMove (SetColor bId color) = interpretSetColor bId color
+interpretMove (Swap bId1 bId2) = interpretSwap bId1 bId2
+interpretMove (Merge bId1 bId2) = interpretMerge bId1 bId2
+
+interpretPointCut :: BlockId -> Point -> InterpretM ()
+interpretPointCut bId (Point x y) = do
   parent <- getBlock bId
   let dx = x - rX parent
   let dy = y - rY parent
@@ -72,7 +79,9 @@ interpretMove (PointCut bId (Point x y)) = do
   insertOrUpdateBlock (bId +. 3) topLeft
   deleteBlock bId
   increaseCost 10 parent
-interpretMove (LineCut bId Horizontal y) = do
+
+interpretLineCut :: BlockId -> Orientation -> Coordinate -> InterpretM ()
+interpretLineCut bId Horizontal y = do
   parent <- getBlock bId
   let dy = y - rY parent
   let top = Rectangle (rX parent) (rY parent + dy) (rWidth parent) (rHeight parent - dy)
@@ -82,7 +91,7 @@ interpretMove (LineCut bId Horizontal y) = do
   insertOrUpdateBlock (bId +. 1) top
   deleteBlock bId
   increaseCost 7 parent
-interpretMove (LineCut bId Vertical x) = do
+interpretLineCut bId Vertical x = do
   parent <- getBlock bId
   let dx = x - rX parent
   let left = Rectangle (rX parent) (rY parent) dx (rHeight parent)
@@ -92,7 +101,9 @@ interpretMove (LineCut bId Vertical x) = do
   insertOrUpdateBlock (bId +. 1) right
   deleteBlock bId
   increaseCost 7 parent
-interpretMove (SetColor bId color) = do
+
+interpretSetColor :: BlockId -> Color -> InterpretM ()
+interpretSetColor bId color = do
   shape@(Rectangle { .. }) <- getBlock bId
   withImage $ \image -> do
     img <- thawImage image
@@ -105,7 +116,9 @@ interpretMove (SetColor bId color) = do
 
     unsafeFreezeImage img
   increaseCost 5 shape
-interpretMove (Swap bId1 bId2) = do
+
+interpretSwap :: BlockId -> BlockId -> InterpretM ()
+interpretSwap bId1 bId2 = do
   shape1 <- getBlock bId1
   shape2 <- getBlock bId2
   withImage $ \image -> do
@@ -118,7 +131,9 @@ interpretMove (Swap bId1 bId2) = do
   insertOrUpdateBlock bId1 shape2
   insertOrUpdateBlock bId2 shape1
   increaseCost 3 shape1
-interpretMove (Merge bId1 bId2) = do
+
+interpretMerge :: BlockId -> BlockId -> InterpretM ()
+interpretMerge bId1 bId2 = do
   shape1 <- getBlock bId1
   shape2 <- getBlock bId2
   newBlockId <- getNewBlockId
