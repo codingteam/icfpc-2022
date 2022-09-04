@@ -16,7 +16,7 @@ stack build
 icfpc2022exe=$(stack path --local-install-root)/bin/icfpc2022-exe
 
 if [ $# -eq 0 ]; then
-    set -- $(seq 1 30)
+    set -- $(seq 1 35)
 fi
 
 for problem_no in "$@"
