@@ -39,7 +39,7 @@ run_solver() {
 stack build
 icfpc2022exe=$(stack path --local-install-root)/bin/icfpc2022-exe
 
-for problem_no in `seq 1 30`
+for problem_no in `seq 1 35`
 do
     problem="problems/${problem_no}.png"
 
