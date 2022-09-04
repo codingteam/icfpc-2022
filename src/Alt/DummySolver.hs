@@ -164,8 +164,8 @@ mergeShapes ToTop s1 s2 = mergeShapesVertical s1 s2
 tryMerge :: Direction -> Point -> Shape -> Color -> SolverM (Maybe Shape)
 tryMerge dir startPoint block startColor = do
   mbBlock <- findNextBlock dir block
-  when (dir == ToTop) $
-    trace (printf "find: %s -> %s\n" (show block) (show mbBlock)) $ return ()
+  --when (dir == ToTop) $
+  --  trace (printf "find: %s -> %s\n" (show block) (show mbBlock)) $ return ()
   case mbBlock of
     Nothing -> do
       markToBeMerged startPoint block startColor
@@ -196,13 +196,13 @@ tryMerge dir startPoint block startColor = do
               case mbArea of
                 Nothing -> do
                   let newShape = (mergeShapes dir block nextBlock)
-                  trace (printf "queue %s: %s + next block %s => %s" (show dir) (show block) (show nextBlock) (show newShape)) $ return ()
+                  --trace (printf "queue %s: %s + next block %s => %s" (show dir) (show block) (show nextBlock) (show newShape)) $ return ()
                   -- trace (printf "mark: %s => %s" (show startPoint) (show newShape)) $ return ()
                   markToBeMerged startPoint newShape startColor
                   return $ Just newShape
                 Just (nextArea,_) -> do
                   let newShape = (mergeShapes dir block nextArea)
-                  trace (printf "queue %s: %s + next area %s => %s" (show dir) (show block) (show nextArea) (show newShape)) $ return ()
+                  --trace (printf "queue %s: %s + next area %s => %s" (show dir) (show block) (show nextArea) (show newShape)) $ return ()
                   -- trace (printf "unmark: %s, mark: %s => %s" (show nextPoint) (show startPoint) (show newShape)) $ return ()
                   unmarkToBeMerged nextPoint
                   markToBeMerged startPoint newShape startColor
@@ -231,8 +231,8 @@ tryMergeAll dir = do
   let isFree block = not $ or [area `shapeContainsPoint` Point (rX block) (rY block) | (area,_) <- M.elems mergeAreas]
   let freeBlocks = HMS.filter isFree blocksMap
       freeBlockIds = HMS.keys freeBlocks
-  when (dir == ToTop) $
-    trace (printf "free blocks: %s" (show freeBlockIds)) $ return ()
+  --when (dir == ToTop) $
+  --  trace (printf "free blocks: %s" (show freeBlockIds)) $ return ()
   if null freeBlockIds
     then return ()
     else do
@@ -308,7 +308,7 @@ mergeAllAreas :: SolverM ()
 mergeAllAreas = do
   areas <- gets ssAreasToMerge
   forM_ (M.elems areas) $ \(area,color) -> do
-    trace (printf "merging area: %s" (show area)) $ return ()
+    --trace (printf "merging area: %s" (show area)) $ return ()
     mergeAreaRecursive area color
 
 calcInitialAvgColor :: BlockId -> SolverM Color
