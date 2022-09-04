@@ -22,6 +22,6 @@ rs = do_get(join(BASEURL, "results", "user"))
 
 if 'results' in rs:
     for item in rs['results']:
-        print(f"ID: {item['problem_id']}\tCost: {item['min_cost']}\tLast submission: {item['last_submitted_at']}")
+        print(f"ID: {item['problem_id']}\tCost: {item['min_cost']} of {item['overall_best_cost']}\tLast submission: {item['last_submitted_at']}")
 else:
     print(rs)
