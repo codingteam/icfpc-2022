@@ -23,7 +23,7 @@ import Alt.AST
 import Alt.Evaluator
 import Alt.Interpreter
 import Alt.SolverM
-import PNG
+import PNG (subImage)
 import Types
 import Util
 
@@ -37,34 +37,42 @@ solve problem =
 solveInside :: Image PixelRGBA8 -> (BlockId, Shape) -> SolverM ()
 solveInside problem (bId, shape) = do
   let subproblem = subImage problem shape
-  let avgs = avgColorPerColumn subproblem
-  let dumbified_avgs =
-          S.toList
-        $ S.fromList
-        $ takeWhile (\l -> S.size (S.fromList l) > 1)
-        $ map (flip simplify (V.toList avgs)) [0..]
+  let (columnAvgs, rowAvgs) = avgColorPerColumnAndRow subproblem
+  let dumbifiedColumnAvgs = uniqueSimplifications columnAvgs
+  let dumbifiedRowAvgs = uniqueSimplifications rowAvgs
   lastBlockId <- lift $ gets isLastBlockId
-  let programs = parMap rpar (produceProgram bId (lastBlockId+1)) dumbified_avgs
-      results =
+  let programs =
+       (parMap rpar (produceProgram bId (lastBlockId+1) Vertical) dumbifiedColumnAvgs)
+       ++ (parMap rpar (produceProgram bId (lastBlockId+1) Horizontal) dumbifiedRowAvgs)
+  let results =
         zip
           programs
           (parMap rpar (\program -> evaluateProgram problem program Nothing) programs)
   let best = minimumBy (\(_, r1) (_, r2) -> compare (erCost r1) (erCost r2)) results
   mapM_ issueMove $ fst best
 
-avgColorPerColumn :: Image PixelRGBA8 -> V.Vector PixelRGBA8
-avgColorPerColumn image =
+avgColorPerColumnAndRow :: Image PixelRGBA8 -> (V.Vector PixelRGBA8, V.Vector PixelRGBA8)
+avgColorPerColumnAndRow image =
   let width = imageWidth image
-      initial = V.replicate width (0, 0, 0, 0)
-      sums = pixelFold go initial image
-      avgs = V.map (sumsToPixel width) sums
-  in avgs
+      height = imageHeight image
+      initial = ( V.replicate width (0, 0, 0, 0), V.replicate height (0, 0, 0, 0) )
+      (columnSums, rowSums) = pixelFold go initial image
+      columnAvgs = V.map (sumsToPixel width) columnSums
+      rowAvgs = V.map (sumsToPixel height) rowSums
+  in (columnAvgs, rowAvgs)
   where
-  go :: V.Vector (Integer, Integer, Integer, Integer) -> Int -> Int -> PixelRGBA8 -> V.Vector (Integer, Integer, Integer, Integer)
-  go acc x _y (PixelRGBA8 r g b a) =
-    let (accR, accG, accB, accA) = acc V.! x
-        newValues = (accR + fromIntegral r, accG + fromIntegral g, accB + fromIntegral b, accA + fromIntegral a)
-    in acc V.// [(x, newValues)]
+  go
+    :: ( V.Vector (Integer, Integer, Integer, Integer), V.Vector (Integer, Integer, Integer, Integer) )
+    -> Int
+    -> Int
+    -> PixelRGBA8
+    -> ( V.Vector (Integer, Integer, Integer, Integer), V.Vector (Integer, Integer, Integer, Integer) )
+  go (colAcc, rowAcc) x y (PixelRGBA8 r g b a) =
+    let (colAccR, colAccG, colAccB, colAccA) = colAcc V.! x
+        newColAcc = (colAccR + fromIntegral r, colAccG + fromIntegral g, colAccB + fromIntegral b, colAccA + fromIntegral a)
+        (rowAccR, rowAccG, rowAccB, rowAccA) = rowAcc V.! y
+        newRowAcc = (rowAccR + fromIntegral r, rowAccG + fromIntegral g, rowAccB + fromIntegral b, rowAccA + fromIntegral a)
+    in (colAcc V.// [(x, newColAcc)], rowAcc V.// [(y, newRowAcc)])
 
 sumsToPixel :: Int -> (Integer, Integer, Integer, Integer) -> PixelRGBA8
 sumsToPixel width (r, g, b, a) =
@@ -75,14 +83,14 @@ sumsToPixel width (r, g, b, a) =
     (b `divide` width)
     (a `divide` width)
 
-produceProgram :: BlockId -> Int -> [PixelRGBA8] -> Program
-produceProgram currentBlockId nextBlockIdNumber colors =
+produceProgram :: BlockId -> Int -> Orientation -> [PixelRGBA8] -> Program
+produceProgram currentBlockId nextBlockIdNumber orientation colors =
   let (h, t) = span (== head colors) colors
   in go [SetColor currentBlockId (head colors)] currentBlockId nextBlockIdNumber (length h) t
   where
   go program _      _      _ []   = reverse $ dropTrailingMerge program
   go program curId nextIdNo x colorsTail@(color:_) =
-    let action1 = LineCut curId Vertical x
+    let action1 = LineCut curId orientation x
         leftBlockId = curId +. 0
         rightBlockId = curId +. 1
         action2 = SetColor rightBlockId color
@@ -102,6 +110,13 @@ simplify color_diff_tolerance colors@(x:_) =
       newHead = replicate (length h) avg
       newTail = simplify color_diff_tolerance t
   in newHead ++ newTail
+
+uniqueSimplifications :: V.Vector PixelRGBA8 -> [[PixelRGBA8]]
+uniqueSimplifications avgs =
+    S.toList
+  $ S.fromList
+  $ takeWhile (\l -> S.size (S.fromList l) > 1)
+  $ map (flip simplify (V.toList avgs)) [0..]
 
 colorDiff :: PixelRGBA8 -> PixelRGBA8 -> Int
 colorDiff (PixelRGBA8 r1 g1 b1 a1) (PixelRGBA8 r2 g2 b2 a2) =
