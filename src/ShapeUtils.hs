@@ -39,3 +39,9 @@ mergeShapesHorizontal left right =
 mergeShapesVertical :: Shape -> Shape -> Shape
 mergeShapesVertical bottom top =
     Rectangle (rX bottom) (rY bottom) (rWidth bottom) (rHeight bottom + rHeight top)
+
+shapeContainsPoint :: Shape -> Point -> Bool
+shapeContainsPoint block (Point x y) =
+  (x >= rX block) && (x < rX block + rWidth block) &&
+    (y >= rY block) && (y < rY block + rHeight block)
+
