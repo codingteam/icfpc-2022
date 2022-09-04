@@ -11,7 +11,17 @@
     <Design.DataContext>
         <vm:MainWindowViewModel/>
     </Design.DataContext>
-
-    <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-
+    
+    <Grid RowDefinitions="*, Auto" ColumnDefinitions="*, Auto, Auto">
+        <Image Grid.ColumnSpan="2" Source="{Binding Bitmap}" Cursor="Hand"
+               PointerPressed="OnPointerPressed"/>
+        
+        <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding InitialImagePath}" />
+        <Button Grid.Row="1" Grid.Column="1" Content="Load Initial Image" Command="{Binding LoadInitialImage}" />
+        
+        <StackPanel Grid.Row="0" Grid.Column="2" Grid.RowSpan="2" Background="Teal">
+            <TextBlock Text="{Binding Info}" />
+            <Button Content="Cut Horizontal" Command="{Binding CutHorizontal}" />
+        </StackPanel>
+    </Grid>
 </Window>
