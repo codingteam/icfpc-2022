@@ -207,6 +207,7 @@ mergeAreaOneDirection area dir rowNumber color = do
               -- trace (printf "merge %s: %s + %s" (show dir) (show firstBlock) (show nextBlock)) $ return ()
               issueMove $ Merge firstBlockId nextBlockId
               id <-lift $ gets isLastBlockId
+              -- trace (printf "merge %s: %s + %s => %s" (show dir) (show firstBlockId) (show nextBlockId) (show id)) $ return ()
               let newBlockId = createBlockId id
               markMerged newBlockId color
               mbNextFirst <- findNextBlock ToRight nextBlock
@@ -253,7 +254,8 @@ paintMergedBlocks tolerance = do
   merged <- gets ssMergedBlocks
   forM_ (M.toList merged) $ \(blockId, color) -> do
     initColor <- calcInitialAvgColor blockId
-    when (colorRho initColor color > tolerance) $
+    when (colorRho initColor color > tolerance) $ do
+      -- trace (printf "color.area %s %s" (show blockId) (show color)) $ return ()
       issueMove $ SetColor blockId color
   blocksMap <- lift $ gets isBlocks
   let unmergedIds = filter (`M.notMember` merged) (HMS.keys blocksMap)
@@ -264,7 +266,8 @@ paintMergedBlocks tolerance = do
       Nothing -> return ()
       Just color -> do
         initColor <- calcInitialAvgColor blockId
-        when (colorRho initColor color > tolerance) $
+        when (colorRho initColor color > tolerance) $ do
+          -- trace (printf "color.unmerged %s %s" (show blockId) (show color)) $ return ()
           issueMove $ SetColor blockId color
 
 swapAvgColors :: BlockId -> BlockId -> SolverM ()
@@ -299,13 +302,13 @@ repaintByQuadsAndMerge level tolerance img = do
   id <-lift $ gets isLastBlockId
   let blockId = (createBlockId id)
 --   issueMove $ SetColor blockId avgColor
-  -- paintByQuadsAndMerge' level tolerance img blockId
-  cutToQuads level blockId
-  rememberAvgColors img
-  blocksMap <- lift $ gets isBlocks
-  forM_ (HMS.keys blocksMap) $ \blockId -> do
-    color <- getAvgColor blockId
-    issueMove $ SetColor blockId color
+  paintByQuadsAndMerge' level tolerance img blockId
+--   cutToQuads level blockId
+--   rememberAvgColors img
+--   blocksMap <- lift $ gets isBlocks
+--   forM_ (HMS.keys blocksMap) $ \blockId -> do
+--     color <- getAvgColor blockId
+--     issueMove $ SetColor blockId color
 
 cutToQuads :: Int -> BlockId -> SolverM ()
 cutToQuads 0 _ = return ()
@@ -317,6 +320,7 @@ cutToQuads level blockId = do
           middleY = rY block + (rHeight block `div` 2)
           middle = Point middleX middleY
       issueMove $ PointCut blockId middle
+      removeMerged blockId
       let children = [blockId +. i | i <- [0..3]]
       forM_ children $ \child -> cutToQuads (level-1) child
     else return ()
