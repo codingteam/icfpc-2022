@@ -13,9 +13,12 @@ import Alt.AST
 import Alt.Interpreter
 import Json
 
+data Direction = ToRight | ToTop
+  deriving (Eq, Show)
+
 data SolverState = SolverState {
       ssProgram :: Program
-    , ssAreasToMerge :: M.Map Point (Shape, Color)
+    , ssAreasToMerge :: M.Map Point (Shape, Color, Direction)
     , ssMergedBlocks :: M.Map BlockId Color
     , ssAvgColorsByBlock :: M.Map BlockId Color
     , ssConfiguration :: Configuration
@@ -87,17 +90,17 @@ removeMerged :: BlockId -> SolverM ()
 removeMerged blockId =
   modify $ \st -> st {ssMergedBlocks = M.delete blockId (ssMergedBlocks st)}
 
-markToBeMerged :: Point -> Shape -> Color -> SolverM ()
-markToBeMerged point shape color =
-  modify $ \st -> st {ssAreasToMerge = M.insert point (shape,color) (ssAreasToMerge st)}
+markToBeMerged :: Point -> Shape -> Color -> Direction -> SolverM ()
+markToBeMerged point shape color dir =
+  modify $ \st -> st {ssAreasToMerge = M.insert point (shape,color,dir) (ssAreasToMerge st)}
 
 unmarkToBeMerged :: Point -> SolverM ()
 unmarkToBeMerged point =
   modify $ \st -> st {ssAreasToMerge = M.delete point (ssAreasToMerge st)}
 
-replaceToBeMerged :: Point -> Point -> Shape -> Color -> SolverM ()
-replaceToBeMerged oldPoint newPoint shape color = do
-  modify $ \st -> st {ssAreasToMerge = M.insert newPoint (shape,color) $ M.delete oldPoint (ssAreasToMerge st)}
+replaceToBeMerged :: Point -> Point -> Shape -> Color -> Direction -> SolverM ()
+replaceToBeMerged oldPoint newPoint shape color dir = do
+  modify $ \st -> st {ssAreasToMerge = M.insert newPoint (shape,color,dir) $ M.delete oldPoint (ssAreasToMerge st)}
 
 -- | Get average color from corresponding area on the target image
 -- (must be remembered by rememberAvgColors first)
@@ -121,7 +124,7 @@ getInitialColor point = do
   cfg <- gets ssConfiguration
   return $ getColorAt cfg point
 
-lookupAreaToBeMerged :: Point -> SolverM (Maybe (Shape, Color))
+lookupAreaToBeMerged :: Point -> SolverM (Maybe (Shape, Color, Direction))
 lookupAreaToBeMerged point = do
   areas <- gets ssAreasToMerge
   return $ M.lookup point areas

@@ -43,9 +43,6 @@ paintWithAvgColors cfgPath imgPath = do
               else Just $ SetColor blockId avgColor
   return $ mapMaybe paint blocksCfg
 
-data Direction = ToRight | ToTop
-  deriving (Eq, Show)
-
 findNextBlock :: Direction -> Shape -> SolverM (Maybe (BlockId, Shape))
 findNextBlock ToRight shape = do
   let nextPoint = Point (rX shape + rWidth shape) (rY shape)
@@ -77,7 +74,7 @@ tryMerge dir startPoint block startColor = do
   --  trace (printf "find: %s -> %s\n" (show block) (show mbBlock)) $ return ()
   case mbBlock of
     Nothing -> do
-      markToBeMerged startPoint block startColor
+      markToBeMerged startPoint block startColor dir
       return Nothing
     Just (nextBlockId, nextBlock) -> do
       let nextPoint = Point (rX nextBlock) (rY nextBlock)
@@ -95,7 +92,7 @@ tryMerge dir startPoint block startColor = do
                        Just mergedColor -> return Nothing
       case mbNextColor of
         Nothing -> do
-          markToBeMerged startPoint block startColor
+          markToBeMerged startPoint block startColor dir
           return Nothing
         Just nextColor -> do
           -- trace (printf "start block %s, color %s; next block %s, color %s" (show block) (show startColor) (show nextBlockId) (show nextColor)) $ return ()
@@ -107,17 +104,17 @@ tryMerge dir startPoint block startColor = do
                   let newShape = (mergeShapes dir block nextBlock)
                   --trace (printf "queue %s: %s + next block %s => %s" (show dir) (show block) (show nextBlock) (show newShape)) $ return ()
                   -- trace (printf "mark: %s => %s" (show startPoint) (show newShape)) $ return ()
-                  markToBeMerged startPoint newShape startColor
+                  markToBeMerged startPoint newShape startColor dir
                   return $ Just newShape
-                Just (nextArea,_) -> do
+                Just (nextArea,_,_) -> do
                   let newShape = (mergeShapes dir block nextArea)
                   --trace (printf "queue %s: %s + next area %s => %s" (show dir) (show block) (show nextArea) (show newShape)) $ return ()
                   -- trace (printf "unmark: %s, mark: %s => %s" (show nextPoint) (show startPoint) (show newShape)) $ return ()
                   unmarkToBeMerged nextPoint
-                  markToBeMerged startPoint newShape startColor
+                  markToBeMerged startPoint newShape startColor dir
                   return $ Just newShape
             else do
-              markToBeMerged startPoint block startColor
+              markToBeMerged startPoint block startColor dir
               return Nothing
 
 tryMergeRecursive :: Direction -> Shape -> Color -> SolverM ()
@@ -137,7 +134,7 @@ tryMergeAll dir = do
   -- trace (printf "all blocks: %s" (show $ HMS.keys blocksMap)) $ return ()
   mergeAreas <- gets ssAreasToMerge
   -- trace (printf "areas: %s" (show mergeAreas)) $ return ()
-  let isFree block = not $ or [area `shapeContainsPoint` Point (rX block) (rY block) | (area,_) <- M.elems mergeAreas]
+  let isFree block = not $ or [area `shapeContainsPoint` Point (rX block) (rY block) | (area,_,areaDir) <- M.elems mergeAreas, areaDir == dir]
   let freeBlocks = HMS.filter isFree blocksMap
       freeBlockIds = HMS.keys freeBlocks
   --when (dir == ToTop) $
@@ -216,7 +213,7 @@ mergeAreaRecursive area color = do
 mergeAllAreas :: SolverM ()
 mergeAllAreas = do
   areas <- gets ssAreasToMerge
-  forM_ (M.elems areas) $ \(area,color) -> do
+  forM_ (M.elems areas) $ \(area,color,_) -> do
     --trace (printf "merging area: %s" (show area)) $ return ()
     mergeAreaRecursive area color
 
@@ -258,12 +255,15 @@ cutToQuads :: Int -> BlockId -> SolverM ()
 cutToQuads 0 _ = return ()
 cutToQuads level blockId = do
   block <- lift $ getBlock blockId
-  let middleX = rX block + (rWidth block `div` 2)
-      middleY = rY block + (rHeight block `div` 2)
-      middle = Point middleX middleY
-  issueMove $ PointCut blockId middle
-  let children = [blockId +. i | i <- [0..3]]
-  forM_ children $ \child -> cutToQuads (level-1) child
+  if rWidth block > 1 && rHeight block > 1
+    then do
+      let middleX = rX block + (rWidth block `div` 2)
+          middleY = rY block + (rHeight block `div` 2)
+          middle = Point middleX middleY
+      issueMove $ PointCut blockId middle
+      let children = [blockId +. i | i <- [0..3]]
+      forM_ children $ \child -> cutToQuads (level-1) child
+    else return ()
 
 paintByQuadsAndMerge :: Int -> Image PixelRGBA8 -> SolverM ()
 paintByQuadsAndMerge level img = do
