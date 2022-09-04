@@ -22,6 +22,7 @@ import Json
 import ShapeUtils
 import Evaluator
 import Alt.SolverM
+import qualified Alt.Solver.Billboard as Billboard
 
 colorRho :: Color -> Color -> Pixel8
 colorRho (PixelRGBA8 r1 g1 b1 a1) (PixelRGBA8 r2 g2 b2 a2) =
@@ -300,6 +301,21 @@ paintByQuadsSearchAndMerge level img = do
   tryMergeAll ToTop
   mergeAllAreas
   paintMergedBlocks
+
+paintByQuadsSearchBillboard :: Image PixelRGBA8 -> SolverM ()
+paintByQuadsSearchBillboard img = do
+  let root = Rectangle 0 0 (imageWidth img) (imageHeight img)
+      middleX = rX root + (rWidth root `div` 2)
+      middleY = rY root + (rHeight root `div` 2)
+      middle = Point middleX middleY
+  -- initQuads <- searchBestCutPoint img (createBlockId 0) root
+  let blockId = createBlockId 0
+  issueMove $ PointCut blockId middle
+  let initQuads = [blockId +. i | i <- [0..3]]
+  forM_ initQuads $ \quadId -> do
+    trace (printf "Search quad %s" (show quadId)) $ return ()
+    quad <- lift $ getBlock quadId
+    Billboard.solveInside img (quadId, quad)
 
 solveRecursiveAndMerge :: Image PixelRGBA8 -> SolverM ()
 solveRecursiveAndMerge img = do

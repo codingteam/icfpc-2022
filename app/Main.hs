@@ -45,6 +45,10 @@ main = do
         program <- drawPngQuadsSearch path
         TIO.putStr $ printProgram program
 
+    ["search4billboard", path] -> do
+        program <- runSolverSimpleM path paintByQuadsSearchBillboard
+        TIO.putStr $ Alt.Printer.printProgram program
+
     ["quads", ls, path] -> do
         let level = read ls
         program <- drawPngAverageQuads path False level

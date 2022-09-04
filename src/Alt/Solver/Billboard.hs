@@ -42,8 +42,8 @@ solveInside problem (bId, shape) = do
   let dumbifiedRowAvgs = uniqueSimplifications rowAvgs
   lastBlockId <- lift $ gets isLastBlockId
   let programs =
-       (parMap rpar (produceProgram bId (lastBlockId+1) Vertical) dumbifiedColumnAvgs)
-       ++ (parMap rpar (produceProgram bId (lastBlockId+1) Horizontal) dumbifiedRowAvgs)
+       (parMap rpar (produceProgram bId (rX shape) (lastBlockId+1) Vertical) dumbifiedColumnAvgs)
+       ++ (parMap rpar (produceProgram bId (rY shape) (lastBlockId+1) Horizontal) dumbifiedRowAvgs)
   evaluationResults <- forM programs $ \program -> do
     (_, interpreterState) <- doAndRollback $ mapM_ issueMove program
     return (evaluateResults problem interpreterState)
@@ -83,14 +83,14 @@ sumsToPixel width (r, g, b, a) =
     (b `divide` width)
     (a `divide` width)
 
-produceProgram :: BlockId -> Int -> Orientation -> [PixelRGBA8] -> Program
-produceProgram currentBlockId nextBlockIdNumber orientation colors =
+produceProgram :: BlockId -> Coordinate -> Int -> Orientation -> [PixelRGBA8] -> Program
+produceProgram currentBlockId blockX nextBlockIdNumber orientation colors =
   let (h, t) = span (== head colors) colors
   in go [SetColor currentBlockId (head colors)] currentBlockId nextBlockIdNumber (length h) t
   where
   go program _      _      _ []   = reverse $ dropTrailingMerge program
   go program curId nextIdNo x colorsTail@(color:_) =
-    let action1 = LineCut curId orientation x
+    let action1 = LineCut curId orientation (blockX+x)
         leftBlockId = curId +. 0
         rightBlockId = curId +. 1
         action2 = SetColor rightBlockId color
