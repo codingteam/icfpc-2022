@@ -11,17 +11,29 @@
 module Alt.Solver.Billboard (solve) where
 
 import Codec.Picture.Types
+import Data.List
+import qualified Data.Set as S
 import qualified Data.Vector as V
 
 import Alt.AST
+import Alt.Evaluator
 import Types
 import Util
 
 solve :: Image PixelRGBA8 -> Int -> Program
-solve problem color_diff_tolerance =
+solve problem max_color_diff_tolerance =
   let avgs = avgColorPerColumn problem
-      dumbified_avgs = simplify color_diff_tolerance (V.toList avgs)
-  in produceProgram dumbified_avgs
+      dumbified_avgs =
+          S.toList
+        $ S.fromList
+        $ map (flip simplify (V.toList avgs)) [0 .. max_color_diff_tolerance]
+      programs = map produceProgram dumbified_avgs
+      results =
+        zip
+          programs
+          (map (\program -> evaluateProgram problem program Nothing) programs)
+      best = minimumBy (\(_, r1) (_, r2) -> compare (erCost r1) (erCost r2)) results
+  in fst best
 
 avgColorPerColumn :: Image PixelRGBA8 -> V.Vector PixelRGBA8
 avgColorPerColumn image =

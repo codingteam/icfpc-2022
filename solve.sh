@@ -68,10 +68,7 @@ do
             run_solver "    level $level" quads-reset $level "$problem"
         done
         run_solver   "recursive solver"   recursive "$problem"
-        info         "billboard solver"
-        for tolerance in $(seq 0 5); do
-            run_solver "    tolerance $tolerance" billboard "$problem" "$tolerance"
-        done
+        run_solver   "billboard solver"   billboard "$problem" "200"
     else
         run_solver  "dumb solver"         dumbFromInitial "$initial_config" "$problem"
         run_solver  "merge solver"        mergeFromInitial "$initial_config" "$problem"
