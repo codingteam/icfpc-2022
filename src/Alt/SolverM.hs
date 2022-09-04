@@ -1,13 +1,9 @@
 
 module Alt.SolverM where
 
-import Control.Monad
 import Control.Monad.State
 import qualified Data.Map as M
 import qualified Data.HashMap.Strict as HMS
--- import qualified Data.Set as S
-import Debug.Trace
-import Text.Printf
 
 import Codec.Picture.Types
 
@@ -16,8 +12,6 @@ import PNG
 import Alt.AST
 import Alt.Interpreter
 import Json
-import ShapeUtils
-import Evaluator
 
 data SolverState = SolverState {
       ssProgram :: Program
@@ -57,15 +51,16 @@ runSolverSimpleM imgPath solver = do
 
 -- | Execute some code and forget state changes;
 -- return the state which you would get if the code was actually executed.
-doAndRollback :: SolverM () -> SolverM SolverState
+doAndRollback :: SolverM () -> SolverM (SolverState, InterpreterState)
 doAndRollback solver = do
   solverSt <- get
   interpSt <- lift get
   solver
-  st' <- get
+  solverSt' <- get
+  interpSt' <- lift get
   put solverSt
   lift $ put interpSt
-  return st'
+  return (solverSt', interpSt')
 
 -- | Issue a command and interpret it
 issueMove :: Move -> SolverM ()
@@ -85,7 +80,7 @@ lookupBlockByPos point = do
   return $ M.lookup point blocksByPos
 
 markMerged :: BlockId -> Color -> SolverM ()
-markMerged blockId color = 
+markMerged blockId color =
   modify $ \st -> st {ssMergedBlocks = M.insert blockId color (ssMergedBlocks st)}
 
 removeMerged :: BlockId -> SolverM ()

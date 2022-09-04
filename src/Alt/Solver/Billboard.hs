@@ -44,10 +44,10 @@ solveInside problem (bId, shape) = do
   let programs =
        (parMap rpar (produceProgram bId (lastBlockId+1) Vertical) dumbifiedColumnAvgs)
        ++ (parMap rpar (produceProgram bId (lastBlockId+1) Horizontal) dumbifiedRowAvgs)
-  let results =
-        zip
-          programs
-          (parMap rpar (\program -> evaluateProgram problem program Nothing) programs)
+  evaluationResults <- forM programs $ \program -> do
+    (_, interpreterState) <- doAndRollback $ mapM_ issueMove program
+    return (evaluateResults problem interpreterState)
+  let results = zip programs evaluationResults
   let best = minimumBy (\(_, r1) (_, r2) -> compare (erCost r1) (erCost r2)) results
   mapM_ issueMove $ fst best
 

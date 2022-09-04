@@ -19,9 +19,12 @@ evaluateProgram :: Image PixelRGBA8 -> Program -> Maybe InterpreterState -> Eval
 evaluateProgram image program start =
   let start' = fromMaybe (initialState (imageWidth image, imageHeight image)) start
       finish = execState (interpretProgram program) start'
+  in evaluateResults image finish
 
-      finalImage = isImage finish
-      totalCost = (isCost finish) + (fromIntegral $ imageSimilarity image finalImage)
+evaluateResults :: Image PixelRGBA8 -> InterpreterState -> EvaluationResult
+evaluateResults problem state =
+  let finalImage = isImage state
+      totalCost = (isCost state) + (fromIntegral $ imageSimilarity problem finalImage)
   in finalImage `deepseq` totalCost `deepseq` EvaluationResult {
         erImage = finalImage
       , erCost = totalCost
