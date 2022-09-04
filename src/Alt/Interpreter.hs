@@ -15,7 +15,7 @@ import qualified Data.HashMap.Strict as HMS
 import Alt.AST
 import Types
 import Util
-import Json (Configuration (..), getBlocks)
+import Json (Configuration (..), getBlocks, BlockJson (..))
 
 data InterpreterState = InterpreterState {
     isLastBlockId :: !Int
@@ -46,7 +46,14 @@ initialState size@(width,height) = initialState' size [(createBlockId 0, Rectang
 -- FIXME :: this does not fill image in the state from configuration!
 initialStateFromJson :: Configuration -> InterpreterState
 initialStateFromJson cfg =
-  (initialState' (cWidth cfg, cHeight cfg) (getBlocks cfg)) {isLastBlockId = length (cBlocks cfg)-1}
+  let st0 = (initialState' (cWidth cfg, cHeight cfg) (getBlocks cfg)) {isLastBlockId = length (cBlocks cfg)-1}
+      st1 = execState (renderConfiguration cfg) st0
+  in  st0 {isImage = isImage st1}
+
+renderConfiguration :: Configuration -> InterpretM ()
+renderConfiguration cfg = forM_ (cBlocks cfg) renderBlock
+  where
+    renderBlock block = fillBlock (bjId block) (bjColor block)
 
 getImageSize :: InterpretM (Coordinate, Coordinate)
 getImageSize = do
@@ -102,8 +109,8 @@ interpretLineCut bId Vertical x = do
   deleteBlock bId
   increaseCost 7 parent
 
-interpretSetColor :: BlockId -> Color -> InterpretM ()
-interpretSetColor bId color = do
+fillBlock :: BlockId -> Color -> InterpretM ()
+fillBlock bId color = do
   shape@(Rectangle { .. }) <- getBlock bId
   withImage $ \image -> do
     img <- thawImage image
@@ -115,6 +122,11 @@ interpretSetColor bId color = do
         writePixel img x y color
 
     unsafeFreezeImage img
+
+interpretSetColor :: BlockId -> Color -> InterpretM ()
+interpretSetColor bId color = do
+  shape <- getBlock bId
+  fillBlock bId color
   increaseCost 5 shape
 
 interpretSwap :: BlockId -> BlockId -> InterpretM ()
