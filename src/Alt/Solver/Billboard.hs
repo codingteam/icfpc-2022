@@ -10,9 +10,10 @@
 -- one go, i.e. the solver skips the cutting step as long as the current column
 -- has the same colour as the next one.
 
-module Alt.Solver.Billboard (solve) where
+module Alt.Solver.Billboard (solve, solveInside) where
 
 import Codec.Picture.Types
+import Control.Monad.State
 import Control.Parallel.Strategies
 import Data.List
 import qualified Data.Set as S
@@ -20,25 +21,36 @@ import qualified Data.Vector as V
 
 import Alt.AST
 import Alt.Evaluator
+import Alt.Interpreter
 import Alt.SolverM
+import PNG
 import Types
 import Util
 
 solve :: Image PixelRGBA8 -> SolverM ()
 solve problem =
-  let avgs = avgColorPerColumn problem
-      dumbified_avgs =
+  let rootBlockShape = Rectangle 0 0 (imageWidth problem) (imageHeight problem)
+      rootBlockId = createBlockId 0
+  in solveInside problem (rootBlockId, rootBlockShape)
+
+-- | Solve a subset of the problem bounded by the given block.
+solveInside :: Image PixelRGBA8 -> (BlockId, Shape) -> SolverM ()
+solveInside problem (bId, shape) = do
+  let subproblem = subImage problem shape
+  let avgs = avgColorPerColumn subproblem
+  let dumbified_avgs =
           S.toList
         $ S.fromList
         $ takeWhile (\l -> S.size (S.fromList l) > 1)
         $ map (flip simplify (V.toList avgs)) [0..]
-      programs = parMap rpar produceProgram dumbified_avgs
+  lastBlockId <- lift $ gets isLastBlockId
+  let programs = parMap rpar (produceProgram bId (lastBlockId+1)) dumbified_avgs
       results =
         zip
           programs
           (parMap rpar (\program -> evaluateProgram problem program Nothing) programs)
-      best = minimumBy (\(_, r1) (_, r2) -> compare (erCost r1) (erCost r2)) results
-  in mapM_ issueMove $ fst best
+  let best = minimumBy (\(_, r1) (_, r2) -> compare (erCost r1) (erCost r2)) results
+  mapM_ issueMove $ fst best
 
 avgColorPerColumn :: Image PixelRGBA8 -> V.Vector PixelRGBA8
 avgColorPerColumn image =
@@ -63,21 +75,20 @@ sumsToPixel width (r, g, b, a) =
     (b `divide` width)
     (a `divide` width)
 
-produceProgram :: [PixelRGBA8] -> Program
-produceProgram colors =
+produceProgram :: BlockId -> Int -> [PixelRGBA8] -> Program
+produceProgram currentBlockId nextBlockIdNumber colors =
   let (h, t) = span (== head colors) colors
-  in go [SetColor (createBlockId 0) (head colors)] 0 (length h) t
+  in go [SetColor currentBlockId (head colors)] currentBlockId nextBlockIdNumber (length h) t
   where
-  go program _   _ []   = reverse $ dropTrailingMerge program
-  go program bId x colorsTail@(color:_) =
-    let currentBlockId = createBlockId bId
-        action1 = LineCut currentBlockId Vertical x
-        leftBlockId = currentBlockId +. 0
-        rightBlockId = currentBlockId +. 1
+  go program _      _      _ []   = reverse $ dropTrailingMerge program
+  go program curId nextIdNo x colorsTail@(color:_) =
+    let action1 = LineCut curId Vertical x
+        leftBlockId = curId +. 0
+        rightBlockId = curId +. 1
         action2 = SetColor rightBlockId color
         action3 = Merge leftBlockId rightBlockId
         (h, t) = span (== color) colorsTail
-    in go (action3:action2:action1:program) (bId+1) (x+length h) t
+    in go (action3:action2:action1:program) (createBlockId nextIdNo) (nextIdNo+1) (x+length h) t
 
   dropTrailingMerge :: Program -> Program
   dropTrailingMerge (Merge _ _ : p) = p
