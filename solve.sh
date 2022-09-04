@@ -75,6 +75,9 @@ do
         run_solver   "billboard solver"   billboard "$problem"
     else
         run_solver  "dumb solver"         dumbFromInitial "$initial_config" "$problem"
-        run_solver  "merge solver"        mergeFromInitial "$initial_config" "$problem"
+        info         "merge solver"
+        for tolerance in 2 5 10 20; do
+            run_solver "    tolerance $tolerance" mergeFromInitial "$initial_config" "$problem" "$tolerance"
+        done
     fi
 done
