@@ -305,15 +305,8 @@ paintByQuadsSearchAndMerge level img = do
 paintByQuadsSearchBillboard :: Image PixelRGBA8 -> SolverM ()
 paintByQuadsSearchBillboard img = do
   let root = Rectangle 0 0 (imageWidth img) (imageHeight img)
-      middleX = rX root + (rWidth root `div` 2)
-      middleY = rY root + (rHeight root `div` 2)
-      middle = Point middleX middleY
-  -- initQuads <- searchBestCutPoint img (createBlockId 0) root
-  let blockId = createBlockId 0
-  issueMove $ PointCut blockId middle
-  let initQuads = [blockId +. i | i <- [0..3]]
+  initQuads <- searchBestCutPoint img (createBlockId 0) root
   forM_ initQuads $ \quadId -> do
-    -- trace (printf "Search quad %s" (show quadId)) $ return ()
     quad <- lift $ getBlock quadId
     Billboard.solveInside img (quadId, quad)
 

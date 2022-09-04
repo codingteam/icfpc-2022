@@ -48,8 +48,11 @@ solveInside problem (bId, shape) = do
     (_, interpreterState) <- doAndRollback $ mapM_ issueMove program
     return (evaluateResults problem interpreterState)
   let results = zip programs evaluationResults
-  let best = minimumBy (\(_, r1) (_, r2) -> compare (erCost r1) (erCost r2)) results
-  mapM_ issueMove $ fst best
+  if null results
+    then return ()
+    else do
+      let best = minimumBy (\(_, r1) (_, r2) -> compare (erCost r1) (erCost r2)) results
+      mapM_ issueMove $ fst best
 
 avgColorPerColumnAndRow :: Image PixelRGBA8 -> (V.Vector PixelRGBA8, V.Vector PixelRGBA8)
 avgColorPerColumnAndRow image =
