@@ -46,6 +46,11 @@ main = do
         program <- drawPngAverageQuads path False level
         TIO.putStr $ printProgram program
 
+    ["quadsMerge", ls, path] -> do
+        let level = read ls
+        program <- runSolverSimpleM path (paintByQuadsAndMerge level)
+        TIO.putStr $ Alt.Printer.printProgram program
+
     ["quads-reset", ls, path] -> do
         let level = read ls
         program <- drawPngAverageQuads path True level
@@ -60,7 +65,7 @@ main = do
         TIO.putStr $ Alt.Printer.printProgram program
 
     ["mergeFromInitial", cfgPath, imgPath] -> do
-        program <- paintWithAvgColorsMerged cfgPath imgPath
+        program <- runSolverM cfgPath imgPath paintWithAvgColorsMerged
         TIO.putStr $ Alt.Printer.printProgram program
 
     ["billboard", path] -> do

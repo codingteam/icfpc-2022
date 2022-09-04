@@ -9,6 +9,7 @@ import Data.Aeson.Types
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as VU
+import Debug.Trace
 
 import Types
 import PNG
@@ -27,6 +28,16 @@ data BlockJson = BlockJson {
     , bjColor :: Color
   }
   deriving (Show)
+
+emptyConfiguration :: (Coordinate,Coordinate) -> Configuration
+emptyConfiguration (width, height) = Configuration width height [block]
+  where
+    block = BlockJson {
+                bjId = createBlockId 0
+              , bjBottomLeft = Point 0 0
+              , bjTopRight = Point width height
+              , bjColor = white
+            }
 
 instance FromJSON BlockId where
   parseJSON (String s) =
@@ -70,7 +81,7 @@ parseConfig path = do
 containsPoint :: BlockJson -> Point -> Bool
 containsPoint block (Point x y) =
   (x >= pX (bjBottomLeft block)) && (x <= pX (bjTopRight block)) &&
-    (y >= pY (bjBottomLeft block)) && (y <= pY (bjBottomLeft block))
+    (y >= pY (bjBottomLeft block)) && (y <= pY (bjTopRight block))
 
 getColorAt :: Configuration -> Point -> Color
 getColorAt cfg point =

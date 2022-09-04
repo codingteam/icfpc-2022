@@ -36,6 +36,23 @@ runSolver solver st ist =
       st' = evalState interpret ist
   in  reverse $ ssProgram st'
 
+runSolverM :: FilePath -> FilePath -> (Configuration -> Image PixelRGBA8 -> SolverM ()) -> IO Program
+runSolverM cfgPath imgPath solver = do
+  img <- readPngImage imgPath
+  cfg <- parseConfig cfgPath
+  let intState = initialStateFromJson cfg
+      solvState = initSolverState cfg
+  return $ runSolver (solver cfg img) solvState intState
+
+runSolverSimpleM :: FilePath -> (Image PixelRGBA8 -> SolverM ()) -> IO Program
+runSolverSimpleM imgPath solver = do
+  img <- readPngImage imgPath
+  let size = (imageWidth img, imageHeight img)
+      initState = initialState size
+      cfg = emptyConfiguration size
+      solvState = initSolverState cfg
+  return $ runSolver (solver img) solvState initState
+
 issueMove :: Move -> SolverM ()
 issueMove m = do
   lift $ interpretMove m
@@ -152,6 +169,7 @@ tryMergeAll = do
   blocks <- lift $ gets isBlocks
   merged <- gets ssMergedBlocks
   let freeBlockIds = filter (`M.notMember` merged) (HMS.keys blocks)
+  trace (printf "free blocks: %s" (show freeBlockIds)) $ return ()
   if null freeBlockIds
     then return ()
     else do
@@ -159,28 +177,48 @@ tryMergeAll = do
           nextBlock = blocks HMS.! nextBlockId
       mbAvgColor <- lookupAvgColor nextBlockId
       case mbAvgColor of
-        Nothing -> return ()
+        Nothing -> do
+          trace (printf "Unknown avg color at %s" (show nextBlockId)) $ return ()
+          return ()
         Just avgColor -> do
           tryMergeRightRecursive nextBlockId nextBlock avgColor
           tryMergeAll
 
-paintWithAvgColorsMergedS :: Configuration -> Image PixelRGBA8 -> SolverM ()
-paintWithAvgColorsMergedS cfg img = do
-  blocks <- lift $ gets (HMS.toList . isBlocks)
-  let avgColorsByBlock = M.fromList [(blockId, calcAvgColor img block) | (blockId, block) <- blocks]
-  modify $ \st -> st {ssAvgColorsByBlock = avgColorsByBlock}
-  tryMergeAll
+paintMergedBlocks :: SolverM ()
+paintMergedBlocks = do
   merged <- gets ssMergedBlocks
   forM_ (M.toList merged) $ \(blockId, color) ->
     issueMove $ SetColor blockId color
 
-paintWithAvgColorsMerged :: FilePath -> FilePath -> IO Program
-paintWithAvgColorsMerged cfgPath imgPath = do
-  img <- readPngImage imgPath
-  cfg <- parseConfig cfgPath
-  let intState = initialStateFromJson cfg
-      solvState = initSolverState cfg
-  return $ runSolver (paintWithAvgColorsMergedS cfg img) solvState intState
+rememberAvgColors :: Image PixelRGBA8 -> SolverM ()
+rememberAvgColors img = do
+  blocks <- lift $ gets (HMS.toList . isBlocks)
+  let avgColorsByBlock = M.fromList [(blockId, calcAvgColor img block) | (blockId, block) <- blocks]
+  modify $ \st -> st {ssAvgColorsByBlock = avgColorsByBlock}
+
+paintWithAvgColorsMerged :: Configuration -> Image PixelRGBA8 -> SolverM ()
+paintWithAvgColorsMerged cfg img = do
+  rememberAvgColors img
+  tryMergeAll
+  paintMergedBlocks
+
+cutToQuads :: Int -> BlockId -> SolverM ()
+cutToQuads 0 _ = return ()
+cutToQuads level blockId = do
+  block <- lift $ getBlock blockId
+  let middleX = rX block + (rWidth block `div` 2)
+      middleY = rY block + (rHeight block `div` 2)
+      middle = Point middleX middleY
+  issueMove $ PointCut blockId middle
+  let children = [blockId +. i | i <- [0..3]]
+  forM_ children $ \child -> cutToQuads (level-1) child
+
+paintByQuadsAndMerge :: Int -> Image PixelRGBA8 -> SolverM ()
+paintByQuadsAndMerge level img = do
+  cutToQuads level (createBlockId 0)
+  rememberAvgColors img
+  tryMergeAll
+  paintMergedBlocks
 
 -- paintTest :: FilePath -> FilePath -> IO Program
 -- paintTest cfgPath imgPath = do
