@@ -89,10 +89,10 @@ lookupBlockByPos point = do
   blocksByPos <- getBlocksByPos
   return $ M.lookup point blocksByPos
 
-data MergeDirection = MergeHorizontal | MergeVertical
+data Direction = ToRight | ToTop
 
-findNextBlock :: MergeDirection -> Shape -> SolverM (Maybe (BlockId, Shape))
-findNextBlock MergeHorizontal shape = do
+findNextBlock :: Direction -> Shape -> SolverM (Maybe (BlockId, Shape))
+findNextBlock ToRight shape = do
   let nextPoint = Point (rX shape + rWidth shape) (rY shape)
   mbNextBlock <- lookupBlockByPos nextPoint
   case mbNextBlock of
@@ -127,8 +127,15 @@ lookupAvgColor blockId = do
   avgColors <- gets ssAvgColorsByBlock
   return $ M.lookup blockId avgColors
 
-lookupInitialColor :: Point -> SolverM Color
-lookupInitialColor point = do
+getAvgColor :: BlockId -> SolverM Color
+getAvgColor blockId = do
+  r <- lookupAvgColor blockId
+  case r of
+    Nothing -> error $ "No average color for block " ++ show blockId
+    Just color -> return color
+
+getInitialColor :: Point -> SolverM Color
+getInitialColor point = do
   cfg <- gets ssConfiguration
   return $ getColorAt cfg point
 
@@ -139,7 +146,7 @@ lookupAreaToBeMerged point = do
 
 tryMergeRight :: Point -> Shape -> Color -> SolverM (Maybe Shape)
 tryMergeRight startPoint block startColor = do
-  mbBlock <- findNextBlock MergeHorizontal block
+  mbBlock <- findNextBlock ToRight block
   -- trace (printf "find: %s -> %s\n" (show block) (show mbBlock)) $ return ()
   case mbBlock of
     Nothing -> do
@@ -154,7 +161,7 @@ tryMergeRight startPoint block startColor = do
                          case mbAvgColor of
                            Nothing -> return Nothing
                            Just avgColor -> do
-                             initColor <- lookupInitialColor nextPoint
+                             initColor <- getInitialColor nextPoint
                              if colorRho initColor avgColor <= colorTolerance
                                then return Nothing
                                else return $ Just avgColor
@@ -233,7 +240,7 @@ mergeAreaOnce area color = do
         mergeFrom 0 firstBlockId firstBlock
   where
     mergeFrom nDone firstBlockId firstBlock = do
-      mbNext <- findNextBlock MergeHorizontal firstBlock
+      mbNext <- findNextBlock ToRight firstBlock
       case mbNext of
         Nothing -> return nDone
         Just (nextBlockId, nextBlock) -> do
@@ -248,7 +255,7 @@ mergeAreaOnce area color = do
               id <-lift $ gets isLastBlockId
               let newBlockId = createBlockId id
               markMerged newBlockId color
-              mbNextFirst <- findNextBlock MergeHorizontal nextBlock
+              mbNextFirst <- findNextBlock ToRight nextBlock
               case mbNextFirst of
                 Nothing -> return (nDone+1)
                 Just (nextFirstId, nextFirstBlock) -> do
@@ -303,9 +310,17 @@ rememberAvgColors img = do
   -- trace (printf "avg colors: %s" (show avgColorsByBlock)) $ return ()
   modify $ \st -> st {ssAvgColorsByBlock = avgColorsByBlock}
 
+swapAvgColors :: BlockId -> BlockId -> SolverM ()
+swapAvgColors b1 b2 = do
+  modify $ \st -> st {
+      ssAvgColorsByBlock = M.insert b1 (ssAvgColorsByBlock st M.! b2) $
+                            M.insert b2 (ssAvgColorsByBlock st M.! b1) (ssAvgColorsByBlock st)
+    }
+
 paintWithAvgColorsMerged :: Configuration -> Image PixelRGBA8 -> SolverM ()
 paintWithAvgColorsMerged cfg img = do
   rememberAvgColors img
+  -- checkSwapAllOnce
   tryMergeAll
   mergeAllAreas
   paintMergedBlocks
@@ -329,11 +344,42 @@ paintByQuadsAndMerge level img = do
   mergeAllAreas
   paintMergedBlocks
 
--- paintTest :: FilePath -> FilePath -> IO Program
--- paintTest cfgPath imgPath = do
---   img <- readPngImage imgPath
---   cfg <- parseConfig cfgPath
---   let intState = initialStateFromJson cfg
---       solvState = initSolverState
---   return $ runSolver (paintTestS cfg img) solvState intState
+checkSwap :: BlockId -> SolverM Bool
+checkSwap blockId = do
+  block <- lift $ getBlock blockId
+  mbNext <- findNextBlock ToRight block
+  case mbNext of
+    Nothing -> return False
+    Just (nextBlockId, nextBlock) -> do
+      avgColor1 <- getAvgColor blockId
+      avgColor2 <- getAvgColor nextBlockId
+      initColor1 <- calcInitialAvgColor blockId
+      initColor2 <- calcInitialAvgColor nextBlockId
+      if (colorRho avgColor1 initColor2 > colorRho avgColor1 initColor1) &&
+            (colorRho avgColor2 initColor1 > colorRho avgColor2 initColor2)
+        then do
+          issueMove $ Swap blockId nextBlockId
+          swapAvgColors blockId nextBlockId
+          return True
+        else return False
+
+checkSwapAllOnce :: SolverM Int
+checkSwapAllOnce = do
+    blocksMap <- lift $ gets isBlocks
+    go (HMS.keys blocksMap)
+  where
+    go [] = return 0
+    go (blockId : rest) = do
+      ok <- checkSwap blockId
+      if ok
+        then (1+) <$> go rest
+        else go rest
+
+checkSwapAll :: SolverM ()
+checkSwapAll = do
+  done <- checkSwapAllOnce
+  trace (printf "done swaps: %d" done) $ return ()
+  if done > 0
+    then checkSwapAll
+    else return ()
 
