@@ -19,6 +19,7 @@ readProgram :: T.Text -> Program
 readProgram text = reverse $ foldl' readLine [] (T.lines text)
   where
   readLine :: Program -> T.Text -> Program
+  readLine revProgram "" = revProgram
   readLine revProgram line =
     case T.uncons line of
       Just ('#', _comment) -> revProgram
@@ -31,7 +32,7 @@ readMove ["cut", bId, orientation, lineNo] = LineCut (readBlockId bId) (readOrie
 readMove ["color", bId, color] = SetColor (readBlockId bId) (readColor color)
 readMove ["swap", bId1, bId2] = Swap (readBlockId bId1) (readBlockId bId2)
 readMove ["merge", bId1, bId2] = Merge (readBlockId bId1) (readBlockId bId2)
-readMove move = error $ "Could not parse this move: " ++ (T.unpack $ T.unwords move)
+readMove move = error $ "Could not parse this move: <" ++ (T.unpack $ T.unwords move) ++ ">"
 
 readBlockId :: T.Text -> BlockId
 readBlockId bId =

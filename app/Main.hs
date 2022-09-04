@@ -56,12 +56,12 @@ main = do
 
     ["quadsMerge", ls, path] -> do
         let level = read ls
-        program <- runSolverSimpleM path (paintByQuadsAndMerge level)
+        program <- runSolverSimpleM path (paintByQuadsAndMerge level 2)
         TIO.putStr $ Alt.Printer.printProgram program
 
     ["quadsSearchMerge", ls, path] -> do
         let level = read ls
-        program <- runSolverSimpleM path (paintByQuadsSearchAndMerge level)
+        program <- runSolverSimpleM path (paintByQuadsSearchAndMerge level 2)
         TIO.putStr $ Alt.Printer.printProgram program
 
     ["quads-reset", ls, path] -> do
@@ -74,15 +74,16 @@ main = do
         TIO.putStr $ printProgram program
 
     ["recursiveMerge", path] -> do
-        program <- runSolverSimpleM path solveRecursiveAndMerge
+        program <- runSolverSimpleM path (solveRecursiveAndMerge 2)
         TIO.putStr $ Alt.Printer.printProgram program
 
     ["dumbFromInitial", cfgPath, imgPath] -> do
         program <- paintWithAvgColors cfgPath imgPath
         TIO.putStr $ Alt.Printer.printProgram program
 
-    ["mergeFromInitial", cfgPath, imgPath] -> do
-        program <- runSolverM cfgPath imgPath paintWithAvgColorsMerged
+    ["mergeFromInitial", cfgPath, imgPath, tol] -> do
+        let tolerance = read tol
+        program <- runSolverM cfgPath imgPath (paintWithAvgColorsMerged tolerance)
         TIO.putStr $ Alt.Printer.printProgram program
 
     ["billboard", imgPath] -> do

@@ -48,6 +48,11 @@ initialStateFromJson :: Configuration -> InterpreterState
 initialStateFromJson cfg =
   (initialState' (cWidth cfg, cHeight cfg) (getBlocks cfg)) {isLastBlockId = length (cBlocks cfg)-1}
 
+getImageSize :: InterpretM (Coordinate, Coordinate)
+getImageSize = do
+  img <- gets isImage
+  return (imageWidth img, imageHeight img)
+
 interpretProgram :: Program -> InterpretM ()
 interpretProgram p = forM_ p interpretMove
 
