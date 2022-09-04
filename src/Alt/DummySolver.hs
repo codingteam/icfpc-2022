@@ -218,12 +218,12 @@ mergeAllAreas = do
     --trace (printf "merging area: %s" (show area)) $ return ()
     mergeAreaRecursive area color
 
-paintMergedBlocks :: SolverM ()
-paintMergedBlocks = do
+paintMergedBlocks :: Pixel8 -> SolverM ()
+paintMergedBlocks tolerance = do
   merged <- gets ssMergedBlocks
   forM_ (M.toList merged) $ \(blockId, color) -> do
     initColor <- calcInitialAvgColor blockId
-    when (initColor /= color) $
+    when (colorRho initColor color > tolerance) $
       issueMove $ SetColor blockId color
   blocksMap <- lift $ gets isBlocks
   let unmergedIds = filter (`M.notMember` merged) (HMS.keys blocksMap)
@@ -234,7 +234,7 @@ paintMergedBlocks = do
       Nothing -> return ()
       Just color -> do
         initColor <- calcInitialAvgColor blockId
-        when (initColor /= color) $
+        when (colorRho initColor color > tolerance) $
           issueMove $ SetColor blockId color
 
 swapAvgColors :: BlockId -> BlockId -> SolverM ()
@@ -251,7 +251,7 @@ paintWithAvgColorsMerged tolerance cfg img = do
   tryMergeAll ToRight tolerance
   tryMergeAll ToTop tolerance
   mergeAllAreas
-  paintMergedBlocks
+  paintMergedBlocks tolerance
 
 mergeAll :: Color -> SolverM ()
 mergeAll color = do
@@ -281,7 +281,7 @@ paintByQuadsAndMerge level tolerance img = do
   tryMergeAll ToRight tolerance
   tryMergeAll ToTop tolerance
   mergeAllAreas
-  paintMergedBlocks
+  paintMergedBlocks tolerance
 
 searchBestCutPoint :: Image PixelRGBA8 -> BlockId -> Shape -> SolverM [BlockId]
 searchBestCutPoint img blockId root = do
@@ -309,7 +309,7 @@ paintByQuadsSearchAndMerge level tolerance img = do
   tryMergeAll ToRight tolerance
   tryMergeAll ToTop tolerance
   mergeAllAreas
-  paintMergedBlocks
+  paintMergedBlocks tolerance
 
 paintByQuadsSearchBillboard :: Image PixelRGBA8 -> SolverM ()
 paintByQuadsSearchBillboard img = do
@@ -328,7 +328,7 @@ solveRecursiveAndMerge tolerance img = do
     tryMergeAll ToRight tolerance
     tryMergeAll ToTop tolerance
     mergeAllAreas
-    paintMergedBlocks
+    paintMergedBlocks tolerance
   where 
     integralImg = makeIntegralImage img
 
