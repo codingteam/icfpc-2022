@@ -7,7 +7,7 @@ import Codec.Picture.Types
 
 import Types
 import Util
-import PNG (pixelToFloat, pixelDiff, PixelRGBAF (..), subImage)
+import PNG (pixelToFloat, PixelRGBAF (..))
 import Data.List (foldl')
 
 type Cost = Int
@@ -74,20 +74,9 @@ pixelNorm (PixelRGBAF r g b a) = sqrt $ r*r + g*g + b*b + a*a
 norm :: Float -> Float -> Float -> Float -> Float
 norm r g b a = sqrt $ r*r + g*g + b*b + a*a
 
-imageDeviation :: Image PixelRGBA8 -> Color -> Float
-imageDeviation img target@(PixelRGBA8 tR tG tB tA) =
-  let vector = VS.toList $ imageData img
-      w = imageWidth img
-      h = imageHeight img
-      p = 4
-      targetV = concat $ replicate (w*h) [tR, tG, tB, tA]
-      diffs = zipWith (-) vector targetV
-      sqrs = VS.fromList $ map (\x -> fromIntegral (x*x)) diffs
-      calcNorm v = sqrt (VS.sum v)
-      pixelDistances = [calcNorm (VS.slice (p*i) p sqrs) | i <- [0 .. w*h-1]]
-      sumDistance = sum pixelDistances
-  in sumDistance
-
 imagePartDeviation :: Image PixelRGBA8 -> Shape -> Color -> Float
-imagePartDeviation img shape target = imageDeviation (subImage img shape) target
-
+imagePartDeviation img shape target =
+  foldl' columnFold 0 [imageHeight img - rY shape - rHeight shape .. imageHeight img - rY shape - 1]
+  where
+    pixelFolder y acc x = acc + pixelSimilarity (pixelAt img x y) target
+    columnFold lineAcc y = foldl' (pixelFolder y) lineAcc [rX shape .. rX shape + rWidth shape - 1]
