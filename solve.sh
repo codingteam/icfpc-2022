@@ -63,6 +63,10 @@ do
         for level in $(seq 5); do
             run_solver "    level $level" quads $level "$problem"
         done
+        info         "quads+merge solver"
+        for level in $(seq 5); do
+            run_solver "    level $level" quadsMerge $level "$problem"
+        done
         info         "quads_reset solver"
         for level in $(seq 5); do
             run_solver "    level $level" quads-reset $level "$problem"

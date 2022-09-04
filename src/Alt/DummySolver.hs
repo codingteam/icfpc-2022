@@ -162,14 +162,14 @@ tryMergeRight startPoint block startColor = do
               case mbArea of
                 Nothing -> do
                   let newShape = (mergeShapesHorizontal block nextBlock)
-                  trace (printf "queue: %s + next block %s => %s" (show block) (show nextBlock) (show newShape)) $ return ()
-                  trace (printf "mark: %s => %s" (show startPoint) (show newShape)) $ return ()
+                  -- trace (printf "queue: %s + next block %s => %s" (show block) (show nextBlock) (show newShape)) $ return ()
+                  -- trace (printf "mark: %s => %s" (show startPoint) (show newShape)) $ return ()
                   markToBeMerged startPoint newShape startColor
                   return $ Just newShape
                 Just (nextArea,_) -> do
                   let newShape = (mergeShapesHorizontal block nextArea)
-                  trace (printf "queue: %s + next area %s => %s" (show block) (show nextArea) (show newShape)) $ return ()
-                  trace (printf "unmark: %s, mark: %s => %s" (show nextPoint) (show startPoint) (show newShape)) $ return ()
+                  -- trace (printf "queue: %s + next area %s => %s" (show block) (show nextArea) (show newShape)) $ return ()
+                  -- trace (printf "unmark: %s, mark: %s => %s" (show nextPoint) (show startPoint) (show newShape)) $ return ()
                   unmarkToBeMerged nextPoint
                   markToBeMerged startPoint newShape startColor
                   return $ Just newShape
@@ -214,11 +214,11 @@ tryMergeAll = do
 
 mergeAreaOnce :: Shape -> Color -> SolverM Int
 mergeAreaOnce area color = do
-    trace (printf "merging area: %s" (show area)) $ return ()
+    -- trace (printf "merging area: %s" (show area)) $ return ()
     mbFirstBlock <- lookupBlockByPos $ Point (rX area) (rY area)
     case mbFirstBlock of
       Nothing -> do
-        trace (printf "first block not found: %s" (show area)) $ return ()
+        -- trace (printf "first block not found: %s" (show area)) $ return ()
         return 0
       Just (firstBlockId, firstBlock) -> do
         mergeFrom 0 firstBlockId firstBlock
@@ -234,7 +234,7 @@ mergeAreaOnce area color = do
               -- trace (printf "area %s, next %s" (show area) (show nextBlock)) $ return ()
               removeMerged nextBlockId
               removeMerged firstBlockId
-              trace (printf "merge: %s + %s" (show firstBlock) (show nextBlock)) $ return ()
+              -- trace (printf "merge: %s + %s" (show firstBlock) (show nextBlock)) $ return ()
               issueMove $ Merge firstBlockId nextBlockId
               id <-lift $ gets isLastBlockId
               let newBlockId = createBlockId id
@@ -281,7 +281,7 @@ rememberAvgColors :: Image PixelRGBA8 -> SolverM ()
 rememberAvgColors img = do
   blocks <- lift $ gets (HMS.toList . isBlocks)
   let avgColorsByBlock = M.fromList [(blockId, calcAvgColor img block) | (blockId, block) <- blocks]
-  trace (printf "avg colors: %s" (show avgColorsByBlock)) $ return ()
+  -- trace (printf "avg colors: %s" (show avgColorsByBlock)) $ return ()
   modify $ \st -> st {ssAvgColorsByBlock = avgColorsByBlock}
 
 paintWithAvgColorsMerged :: Configuration -> Image PixelRGBA8 -> SolverM ()
