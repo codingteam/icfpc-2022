@@ -20,5 +20,8 @@ def do_get(url):
 
 rs = do_get(join(BASEURL, "results", "user"))
 
-for item in rs['results']:
-    print(f"ID: {item['problem_id']}\tCost: {item['min_cost']}\tLast submission: {item['last_submitted_at']}")
+if 'results' in rs:
+    for item in rs['results']:
+        print(f"ID: {item['problem_id']}\tCost: {item['min_cost']}\tLast submission: {item['last_submitted_at']}")
+else:
+    print(rs)
