@@ -63,20 +63,24 @@ sumsToPixel width (r, g, b, a) =
     (a `divide` width)
 
 produceProgram :: [PixelRGBA8] -> Program
-produceProgram = go [] (createBlockId 0) 1
+produceProgram colors =
+  let (h, t) = span (== head colors) colors
+  in go [SetColor (createBlockId 0) (head colors)] 0 (length h) t
   where
-  go program _   _ []   = reverse $ program
-  go program bId x [color] =
-    let action = SetColor bId color
-        nextBlockId = bId +. 1
-    in go (action:program) nextBlockId (x+1) []
-  go program bId x (color:nextColor:avgs)
-    | color == nextColor = go program bId (x+1) (nextColor:avgs)
-    | otherwise =
-        let action1 = SetColor bId color
-            action2 = LineCut bId Vertical x
-            nextBlockId = bId +. 1
-        in go (action2:action1:program) nextBlockId (x+1) (nextColor:avgs)
+  go program _   _ []   = reverse $ dropTrailingMerge program
+  go program bId x colorsTail@(color:_) =
+    let currentBlockId = createBlockId bId
+        action1 = LineCut currentBlockId Vertical x
+        leftBlockId = currentBlockId +. 0
+        rightBlockId = currentBlockId +. 1
+        action2 = SetColor rightBlockId color
+        action3 = Merge leftBlockId rightBlockId
+        (h, t) = span (== color) colorsTail
+    in go (action3:action2:action1:program) (bId+1) (x+length h) t
+
+  dropTrailingMerge :: Program -> Program
+  dropTrailingMerge (Merge _ _ : p) = p
+  dropTrailingMerge p = p
 
 simplify :: Int -> [PixelRGBA8] -> [PixelRGBA8]
 simplify _ [] = []
