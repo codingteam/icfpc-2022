@@ -54,6 +54,11 @@ main = do
         program <- runSolverSimpleM path (paintByQuadsAndMerge level)
         TIO.putStr $ Alt.Printer.printProgram program
 
+    ["quadsSearchMerge", ls, path] -> do
+        let level = read ls
+        program <- runSolverSimpleM path (paintByQuadsSearchAndMerge level)
+        TIO.putStr $ Alt.Printer.printProgram program
+
     ["quads-reset", ls, path] -> do
         let level = read ls
         program <- drawPngAverageQuads path True level
