@@ -79,5 +79,6 @@ do
         for tolerance in 2 5 10 20; do
             run_solver "    tolerance $tolerance" mergeFromInitial "$initial_config" "$problem" "$tolerance"
         done
+        run_solver  "billboard solver"        billboardFromInitial "$initial_config" "$problem"
     fi
 done

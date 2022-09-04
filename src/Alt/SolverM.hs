@@ -54,16 +54,16 @@ runSolverSimpleM imgPath solver = do
 
 -- | Execute some code and forget state changes;
 -- return the state which you would get if the code was actually executed.
-doAndRollback :: SolverM () -> SolverM (SolverState, InterpreterState)
+doAndRollback :: SolverM a -> SolverM (a, SolverState, InterpreterState)
 doAndRollback solver = do
   solverSt <- get
   interpSt <- lift get
-  solver
+  result <- solver
   solverSt' <- get
   interpSt' <- lift get
   put solverSt
   lift $ put interpSt
-  return (solverSt', interpSt')
+  return (result, solverSt', interpSt')
 
 -- | Issue a command and interpret it
 issueMove :: Move -> SolverM ()

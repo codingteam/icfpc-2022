@@ -10,12 +10,13 @@
 -- one go, i.e. the solver skips the cutting step as long as the current column
 -- has the same colour as the next one.
 
-module Alt.Solver.Billboard (solve, solveInside) where
+module Alt.Solver.Billboard (solve, solveWithConfig, solveInside) where
 
 import Codec.Picture.Types
 import Control.Monad.State
 import Control.Parallel.Strategies
 import Data.List
+import Data.Maybe
 import qualified Data.Set as S
 import qualified Data.Vector as V
 
@@ -23,6 +24,7 @@ import Alt.AST
 import Alt.Evaluator
 import Alt.Interpreter
 import Alt.SolverM
+import Json
 import PNG (subImage)
 import Types
 import Util
@@ -32,6 +34,13 @@ solve problem =
   let rootBlockShape = Rectangle 0 0 (imageWidth problem) (imageHeight problem)
       rootBlockId = createBlockId 0
   in solveInside problem (rootBlockId, rootBlockShape)
+
+solveWithConfig :: Configuration -> Image PixelRGBA8 -> SolverM ()
+solveWithConfig cfg problem = do
+  mergeAllBlocks cfg
+  let rootBlockShape = Rectangle 0 0 (imageWidth problem) (imageHeight problem)
+  rootBlockId <- liftM createBlockId $ lift $ gets isLastBlockId
+  solveInside problem (rootBlockId, rootBlockShape)
 
 -- | Solve a subset of the problem bounded by the given block.
 solveInside :: Image PixelRGBA8 -> (BlockId, Shape) -> SolverM ()
@@ -45,7 +54,7 @@ solveInside problem (bId, shape) = do
        (parMap rpar (produceProgram bId (rX shape) (lastBlockId+1) Vertical) dumbifiedColumnAvgs)
        ++ (parMap rpar (produceProgram bId (rY shape) (lastBlockId+1) Horizontal) dumbifiedRowAvgs)
   evaluationResults <- forM programs $ \program -> do
-    (_, interpreterState) <- doAndRollback $ mapM_ issueMove program
+    (_, _, interpreterState) <- doAndRollback $ mapM_ issueMove program
     return (evaluateResults problem interpreterState)
   let results = zip programs evaluationResults
   if null results
@@ -140,3 +149,60 @@ averageColor colors =
   go :: (Integer, Integer, Integer, Integer) -> PixelRGBA8 -> (Integer, Integer, Integer, Integer)
   go (accR, accG, accB, accA) (PixelRGBA8 r g b a) =
     (accR + fromIntegral r, accG + fromIntegral g, accB + fromIntegral b, accA + fromIntegral a)
+
+mergeAllBlocks :: Configuration -> SolverM ()
+mergeAllBlocks cfg = do
+  let blocksSet = S.fromList (cBlocks cfg)
+  mergeSome blocksSet
+  where
+  mergeSome :: S.Set BlockJson -> SolverM ()
+  mergeSome blocks
+    | S.size blocks == 1 = return ()
+    | otherwise = do
+        let blocksList = S.toList blocks
+        let candidates = [ (lhs, rhs) | (lhs:others) <- tails blocksList, rhs <- others]
+        triples <- forM candidates $ \(lhs, rhs) -> do
+          newBlock <- tryMerge lhs rhs
+          return (lhs, rhs, newBlock)
+
+        let (removed1, removed2, Just added) =
+              case filter (\(_, _, i) -> isJust i) triples of
+                (h:_t) -> h
+                [] -> error $ "No Just values in here: " ++ (show triples)
+        issueMove $ Merge (bjId removed1) (bjId removed2)
+
+        mergeSome $ added `S.insert` (removed1 `S.delete` (removed2 `S.delete` blocks))
+
+  tryMerge :: BlockJson -> BlockJson -> SolverM (Maybe BlockJson)
+  tryMerge lhs rhs
+    -- lhs above rhs
+    | bl_lhs == tl_rhs && br_lhs == tr_rhs = liftM Just $ newBlock bl_rhs tr_lhs
+    -- lhs below rhs
+    | bl_rhs == tl_lhs && br_rhs == tr_lhs = liftM Just $ newBlock bl_lhs tr_rhs
+    -- lhs to the left of rhs
+    | tr_lhs == tl_rhs && br_lhs == bl_rhs = liftM Just $ newBlock bl_lhs tr_rhs
+    -- lhs to the right of rhs
+    | tr_rhs == tl_lhs && br_rhs == bl_lhs = liftM Just $ newBlock bl_rhs tr_lhs
+    | otherwise = return Nothing
+    where
+    (bl_lhs, br_lhs, tr_lhs, tl_lhs) = corners lhs
+    (bl_rhs, br_rhs, tr_rhs, tl_rhs) = corners rhs
+
+    -- Warning: this hard-codes the colour of the block to white
+    newBlock :: Point -> Point -> SolverM BlockJson
+    newBlock bottomLeft topRight = do
+      bId <- liftM (\i -> createBlockId (i+1)) $ lift $ gets isLastBlockId
+      return BlockJson {
+                bjId = bId
+              , bjBottomLeft = bottomLeft
+              , bjTopRight = topRight
+              , bjColor = white
+              }
+
+  corners :: BlockJson -> (Point, Point, Point, Point)
+  corners block =
+    let bl = bjBottomLeft block
+        tr = bjTopRight block
+        br = Point { pX = pX tr, pY = pY bl }
+        tl = Point { pX = pX bl, pY = pY tr }
+    in (bl, br, tr, tl)

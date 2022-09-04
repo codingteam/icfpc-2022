@@ -90,6 +90,10 @@ main = do
         program <- runSolverSimpleM imgPath Alt.Solver.Billboard.solve
         TIO.putStr $ Alt.Printer.printProgram program
 
+    ["billboardFromInitial", cfgPath, imgPath] -> do
+        program <- runSolverM cfgPath imgPath Alt.Solver.Billboard.solveWithConfig
+        TIO.putStr $ Alt.Printer.printProgram program
+
     -- TODO: properly parse optional arguments
     ["evaluateSolution", imagePath, solutionPath] -> do
       evaluateSolution imagePath solutionPath Nothing Nothing

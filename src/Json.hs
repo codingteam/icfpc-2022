@@ -27,7 +27,7 @@ data BlockJson = BlockJson {
     , bjTopRight :: Point
     , bjColor :: Color
   }
-  deriving (Show)
+  deriving (Eq, Ord, Show)
 
 emptyConfiguration :: (Coordinate,Coordinate) -> Configuration
 emptyConfiguration (width, height) = Configuration width height [block]
@@ -88,7 +88,7 @@ getColorAt cfg point =
   let goodBlocks = filter (`containsPoint` point) (cBlocks cfg)
   in  if null goodBlocks
         then error $ "Can't find point in configuration: " ++ show point
-        else bjColor $ head goodBlocks 
+        else bjColor $ head goodBlocks
 
 calcAvgColorFromConfig :: Configuration -> Shape -> Color
 calcAvgColorFromConfig cfg shape =
