@@ -68,7 +68,7 @@ do
             run_solver "    level $level" quads-reset $level "$problem"
         done
         run_solver   "recursive solver"   recursive "$problem"
-        run_solver   "billboard solver"   billboard "$problem" "200"
+        run_solver   "billboard solver"   billboard "$problem"
     else
         run_solver  "dumb solver"         dumbFromInitial "$initial_config" "$problem"
         run_solver  "merge solver"        mergeFromInitial "$initial_config" "$problem"

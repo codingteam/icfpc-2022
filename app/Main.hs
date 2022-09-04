@@ -73,12 +73,7 @@ main = do
 
     ["billboard", path] -> do
         image <- readPngImage path
-        let program = Alt.Solver.Billboard.solve image 0
-        TIO.putStr $ Alt.Printer.printProgram program
-
-    ["billboard", path, color_diff_tolerance] -> do
-        image <- readPngImage path
-        let program = Alt.Solver.Billboard.solve image (read color_diff_tolerance)
+        let program = Alt.Solver.Billboard.solve image
         TIO.putStr $ Alt.Printer.printProgram program
 
     -- TODO: properly parse optional arguments

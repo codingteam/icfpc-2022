@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+
 -- The larger the area, the cheaper it is to cut it into pieces. In limit, this
 -- means we should always cut the *smallest* possible piece from the *largest*
 -- possible area. The billboard solver is a simple implementation of this idea:
@@ -21,13 +23,14 @@ import Alt.Evaluator
 import Types
 import Util
 
-solve :: Image PixelRGBA8 -> Int -> Program
-solve problem max_color_diff_tolerance =
+solve :: Image PixelRGBA8 -> Program
+solve problem =
   let avgs = avgColorPerColumn problem
       dumbified_avgs =
           S.toList
         $ S.fromList
-        $ map (flip simplify (V.toList avgs)) [0 .. max_color_diff_tolerance]
+        $ takeWhile (\l -> S.size (S.fromList l) > 1)
+        $ map (flip simplify (V.toList avgs)) [0..]
       programs = parMap rpar produceProgram dumbified_avgs
       results =
         zip
