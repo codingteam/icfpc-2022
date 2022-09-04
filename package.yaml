@@ -39,6 +39,7 @@ dependencies:
 - deepseq
 - gloss
 - gloss-juicy
+- parallel
 
 ghc-options:
 - -Wall

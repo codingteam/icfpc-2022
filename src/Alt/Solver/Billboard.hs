@@ -11,6 +11,7 @@
 module Alt.Solver.Billboard (solve) where
 
 import Codec.Picture.Types
+import Control.Parallel.Strategies
 import Data.List
 import qualified Data.Set as S
 import qualified Data.Vector as V
@@ -27,11 +28,11 @@ solve problem max_color_diff_tolerance =
           S.toList
         $ S.fromList
         $ map (flip simplify (V.toList avgs)) [0 .. max_color_diff_tolerance]
-      programs = map produceProgram dumbified_avgs
+      programs = parMap rpar produceProgram dumbified_avgs
       results =
         zip
           programs
-          (map (\program -> evaluateProgram problem program Nothing) programs)
+          (parMap rpar (\program -> evaluateProgram problem program Nothing) programs)
       best = minimumBy (\(_, r1) (_, r2) -> compare (erCost r1) (erCost r2)) results
   in fst best
 
