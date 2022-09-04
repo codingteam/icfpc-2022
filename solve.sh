@@ -54,28 +54,27 @@ do
 
     if ! [ -f "$initial_config" ]
     then
-#        # run_solver "default solver"     "$problem"
-#        # run_solver "spiral sovler"      spiral "$problem"
-#        run_solver   "average solver"     average "$problem"
-#        run_solver   "average4 solver"    average4 "$problem"
-#        # run_solver "search4 solver"     search4 "$problem"
-#        info         "quads solver"
-#        for level in $(seq 5); do
-#            run_solver "    level $level" quads $level "$problem"
-#        done
-#        info         "quads+merge solver"
-#        for level in $(seq 5); do
-#            run_solver "    level $level" quadsMerge $level "$problem"
-#        done
-#        info         "quads_reset solver"
-#        for level in $(seq 5); do
-#            run_solver "    level $level" quads-reset $level "$problem"
-#        done
-#        run_solver   "recursive solver"   recursive "$problem"
+        # run_solver "default solver"     "$problem"
+        # run_solver "spiral sovler"      spiral "$problem"
+        run_solver   "average solver"     average "$problem"
+        run_solver   "average4 solver"    average4 "$problem"
+        # run_solver "search4 solver"     search4 "$problem"
+        info         "quads solver"
+        for level in $(seq 5); do
+            run_solver "    level $level" quads $level "$problem"
+        done
+        info         "quads+merge solver"
+        for level in $(seq 5); do
+            run_solver "    level $level" quadsMerge $level "$problem"
+        done
+        info         "quads_reset solver"
+        for level in $(seq 5); do
+            run_solver "    level $level" quads-reset $level "$problem"
+        done
+        run_solver   "recursive solver"   recursive "$problem"
         run_solver   "billboard solver"   billboard "$problem"
     else
-#        run_solver  "dumb solver"         dumbFromInitial "$initial_config" "$problem"
-#        run_solver  "merge solver"        mergeFromInitial "$initial_config" "$problem"
-        true
+        run_solver  "dumb solver"         dumbFromInitial "$initial_config" "$problem"
+        run_solver  "merge solver"        mergeFromInitial "$initial_config" "$problem"
     fi
 done
