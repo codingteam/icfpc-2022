@@ -10,7 +10,7 @@
 -- one go, i.e. the solver skips the cutting step as long as the current column
 -- has the same colour as the next one.
 
-module Alt.Solver.Billboard (solve, solveWithConfig, solveInside) where
+module Alt.Solver.Billboard (solve, solveWithConfig, solveInside, mergeAllBlocks) where
 
 import Codec.Picture.Types
 import Control.Monad.State

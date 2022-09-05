@@ -299,16 +299,32 @@ repaintByQuadsAndMerge level tolerance img = do
   let avgColor = calcAvgColor img root
   mergeAll avgColor
   modify $ \st -> st {ssAreasToMerge = M.empty}
+--   Billboard.mergeAllBlocks <$> gets ssConfiguration
   id <-lift $ gets isLastBlockId
   let blockId = (createBlockId id)
---   issueMove $ SetColor blockId avgColor
   paintByQuadsAndMerge' level tolerance img blockId
---   cutToQuads level blockId
---   rememberAvgColors img
---   blocksMap <- lift $ gets isBlocks
---   forM_ (HMS.keys blocksMap) $ \blockId -> do
---     color <- getAvgColor blockId
---     issueMove $ SetColor blockId color
+
+repaintByQuadsSearchBillboard :: Image PixelRGBA8 -> SolverM ()
+repaintByQuadsSearchBillboard img = do
+  let root = Rectangle 0 0 (imageWidth img) (imageHeight img)
+  let avgColor = calcAvgColor img root
+  mergeAll avgColor
+  modify $ \st -> st {ssAreasToMerge = M.empty}
+--   Billboard.mergeAllBlocks <$> gets ssConfiguration
+  id <-lift $ gets isLastBlockId
+  let blockId = (createBlockId id)
+  paintByQuadsSearchBillboard' img blockId
+
+repaintByQuadsSearchAndMerge :: Int -> Pixel8 -> Image PixelRGBA8 -> SolverM ()
+repaintByQuadsSearchAndMerge level tolerance img = do
+  let root = Rectangle 0 0 (imageWidth img) (imageHeight img)
+  let avgColor = calcAvgColor img root
+  mergeAll avgColor
+  modify $ \st -> st {ssAreasToMerge = M.empty}
+--   Billboard.mergeAllBlocks <$> gets ssConfiguration
+  id <-lift $ gets isLastBlockId
+  let blockId = (createBlockId id)
+  paintByQuadsSearchAndMerge' level tolerance img blockId
 
 cutToQuads :: Int -> BlockId -> SolverM ()
 cutToQuads 0 _ = return ()
@@ -342,22 +358,52 @@ searchBestCutPoint img blockId root = do
   let integralImg = makeIntegralImage img
       checkPoint p =
         let quads = cutPointShape root p
-            subAvgColors = parMap rpar (calcAvgColorFromIntegral integralImg) quads
-            subRhos = parMap rpar (\(quad, avg) -> imagePartDeviation img quad avg) (zip quads subAvgColors)
+            subAvgColors = map (calcAvgColorFromIntegral integralImg) quads
+            subRhos = map (\(quad, avg) -> imagePartDeviation img quad avg) (zip quads subAvgColors)
         in  (p, sum subRhos, quads, subAvgColors)
       step = 10
-      allPoints = [Point x y | x <- [rX root + 1, rX root + step + 1 .. rWidth root - 2],
-                               y <- [rY root + 1, rY root + step + 1 .. rHeight root - 2]]
-      checkResults = map checkPoint allPoints
-      (bestPoint, _, bestQuads, avgColors) = minimumBy (compare `on` \(_,rho,_,_) -> rho) checkResults
+      allPoints = [Point x y | x <- [rX root + 1, rX root + step + 1 .. rX root + rWidth root - 2],
+                               y <- [rY root + 1, rY root + step + 1 .. rY root + rHeight root - 2]]
+  let checkResults = parMap rpar checkPoint allPoints
+  let (bestPoint, _, bestQuads, avgColors) = minimumBy (compare `on` \(_,rho,_,_) -> rho) $ checkResults
   issueMove $ PointCut blockId bestPoint
+  removeMerged blockId
   let children = [blockId +. i | i <- [0..3]]
   return children
 
+paintByQuadsSearch2 :: Int -> Image PixelRGBA8 -> SolverM ()
+paintByQuadsSearch2 level img = do
+    let blockId = createBlockId 0
+    root <- lift $ getBlock blockId
+    let middleX = rX root + (rWidth root `div` 2)
+        middleY = rY root + (rHeight root `div` 2)
+        middle = Point middleX middleY
+    issueMove $ PointCut blockId middle
+    removeMerged blockId
+    let quads = [blockId +. i | i <- [0..3]]
+    forM_ quads $ \quadId -> do
+      quad <- lift $ getBlock quadId
+      subQuads <- searchBestCutPoint img quadId quad
+      forM_ subQuads $ \subQuadId -> do
+        cutToQuads (level-2) subQuadId
+    rememberAvgColors img
+    let tolerance = 2
+    tryMergeAll ToRight tolerance
+    tryMergeAll ToTop tolerance
+    mergeAllAreas
+    paintMergedBlocks tolerance
+--     blockIds <- lift $ gets (HMS.keys . isBlocks)
+--     forM_ blockIds $ \blockId -> do
+--       avgColor <- getAvgColor blockId
+--       issueMove $ SetColor blockId avgColor
+
 paintByQuadsSearchAndMerge :: Int -> Pixel8 -> Image PixelRGBA8 -> SolverM ()
-paintByQuadsSearchAndMerge level tolerance img = do
-  let root = Rectangle 0 0 (imageWidth img) (imageHeight img)
-  initQuads <- searchBestCutPoint img (createBlockId 0) root
+paintByQuadsSearchAndMerge level tolerance img = paintByQuadsSearchAndMerge' level tolerance img (createBlockId 0)
+
+paintByQuadsSearchAndMerge' :: Int -> Pixel8 -> Image PixelRGBA8 -> BlockId -> SolverM ()
+paintByQuadsSearchAndMerge' level tolerance img blockId = do
+  root <- lift $ getBlock blockId
+  initQuads <- searchBestCutPoint img blockId root
   forM_ initQuads $ \quad -> cutToQuads (level-1) quad
   rememberAvgColors img
   tryMergeAll ToRight tolerance
@@ -366,9 +412,12 @@ paintByQuadsSearchAndMerge level tolerance img = do
   paintMergedBlocks tolerance
 
 paintByQuadsSearchBillboard :: Image PixelRGBA8 -> SolverM ()
-paintByQuadsSearchBillboard img = do
-  let root = Rectangle 0 0 (imageWidth img) (imageHeight img)
-  initQuads <- searchBestCutPoint img (createBlockId 0) root
+paintByQuadsSearchBillboard img = paintByQuadsSearchBillboard' img (createBlockId 0)
+
+paintByQuadsSearchBillboard' :: Image PixelRGBA8 -> BlockId -> SolverM ()
+paintByQuadsSearchBillboard' img blockId = do
+  root <- lift $ getBlock blockId
+  initQuads <- searchBestCutPoint img blockId root
   forM_ initQuads $ \quadId -> do
     quad <- lift $ getBlock quadId
     Billboard.solveInside img (quadId, quad)

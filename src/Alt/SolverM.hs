@@ -140,7 +140,8 @@ calcInitialAvgColor blockId = do
 rememberAvgColors :: Image PixelRGBA8 -> SolverM ()
 rememberAvgColors img = do
   blocks <- lift $ gets (HMS.toList . isBlocks)
-  let avgColorsByBlock = M.fromList [(blockId, calcAvgColor img block) | (blockId, block) <- blocks]
+  let integralImg = makeIntegralImage img
+  let avgColorsByBlock = M.fromList [(blockId, calcAvgColorFromIntegral integralImg block) | (blockId, block) <- blocks]
   -- trace (printf "avg colors: %s" (show avgColorsByBlock)) $ return ()
   modify $ \st -> st {ssAvgColorsByBlock = avgColorsByBlock}
 

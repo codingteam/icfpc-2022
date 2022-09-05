@@ -64,6 +64,11 @@ main = do
         program <- runSolverSimpleM path (paintByQuadsSearchAndMerge level 2)
         TIO.putStr $ Alt.Printer.printProgram program
 
+    ["quadsSearch2", ls, path] -> do
+        let level = read ls
+        program <- runSolverSimpleM path (paintByQuadsSearch2 level)
+        TIO.putStr $ Alt.Printer.printProgram program
+
     ["quads-reset", ls, path] -> do
         let level = read ls
         program <- drawPngAverageQuads path True level
@@ -90,6 +95,16 @@ main = do
         let tolerance = read tol
         let level = read ls
         program <- runSolverM cfgPath imgPath (\cfg -> repaintByQuadsAndMerge level tolerance)
+        TIO.putStr $ Alt.Printer.printProgram program
+
+    ["repaintSearchBillboard", cfgPath, imgPath] -> do
+        program <- runSolverM cfgPath imgPath (\cfg -> repaintByQuadsSearchBillboard)
+        TIO.putStr $ Alt.Printer.printProgram program
+
+    ["repaintQuadsSearch", cfgPath, imgPath, ls, tol] -> do
+        let tolerance = read tol
+        let level = read ls
+        program <- runSolverM cfgPath imgPath (\cfg -> repaintByQuadsSearchAndMerge level tolerance)
         TIO.putStr $ Alt.Printer.printProgram program
 
     ["billboard", imgPath] -> do
