@@ -103,6 +103,11 @@ main = do
         program <- runSolverM cfgPath imgPath (\cfg -> repaintByQuadsAndMerge level tolerance)
         TIO.putStr $ Alt.Printer.printProgram program
 
+    ["repaintRecursiveHalfs", cfgPath, imgPath, ls] -> do
+        let level = read ls
+        program <- runSolverM cfgPath imgPath (\cfg -> repaintRecursiveHalfs level Vertical)
+        TIO.putStr $ Alt.Printer.printProgram program
+
     ["repaintSearchBillboard", cfgPath, imgPath] -> do
         program <- runSolverM cfgPath imgPath (\cfg -> repaintByQuadsSearchBillboard)
         TIO.putStr $ Alt.Printer.printProgram program

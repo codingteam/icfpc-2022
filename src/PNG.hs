@@ -9,6 +9,8 @@ import qualified Data.Vector.Storable as VS
 import Codec.Picture.Types
 import Codec.Picture.Png (decodePng)
 import Codec.Picture.Extra
+import Debug.Trace
+import Text.Printf
 
 import Types(Color, Coordinate, Point(..), Shape (..))
 
@@ -75,7 +77,7 @@ calcAvgColor img shape =
       size = fromIntegral (rWidth shape * rHeight shape) :: Float
       (avgR, avgG, avgB, avgA) = (sumR / size, sumG / size, sumB / size, sumA / size)
       colorAvg = PixelRGBA8 (round avgR) (round avgG) (round avgB) 255
-  in colorAvg
+  in  colorAvg
 
 data PixelRGBA = PixelRGBA{ r :: !Integer, g :: !Integer, b :: !Integer, a :: !Integer}
 

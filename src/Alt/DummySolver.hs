@@ -326,6 +326,16 @@ repaintByQuadsSearchAndMerge level tolerance img = do
   let blockId = (createBlockId id)
   paintByQuadsSearchAndMerge' level tolerance img blockId
 
+repaintRecursiveHalfs :: Int -> Orientation -> Image PixelRGBA8 -> SolverM ()
+repaintRecursiveHalfs level dir img = do
+  let root = Rectangle 0 0 (imageWidth img) (imageHeight img)
+  let avgColor = calcAvgColor img root
+  mergeAll avgColor
+  modify $ \st -> st {ssAreasToMerge = M.empty}
+  id <-lift $ gets isLastBlockId
+  let blockId = (createBlockId id)
+  recursiveHalfs2' level dir img blockId (createBlockId $ id+1)
+
 cutToQuads :: Int -> BlockId -> SolverM ()
 cutToQuads 0 _ = return ()
 cutToQuads level blockId = do
@@ -493,8 +503,6 @@ recursiveHalfs2' level dir img blockId subBlockToPaint = go level dir blockId su
       root <- lift $ getBlock blockId
       let commonAvg = calcAvgColor img root
       when (blockId == subBlockToPaint) $ do
-        when (commonAvg == PixelRGBA8 0 0 0 255) $
-          trace ("C.black: " ++ show root) $ return ()
         issueMove $ SetColor blockId commonAvg
       if level == 0
         then return ()
@@ -508,16 +516,14 @@ recursiveHalfs2' level dir img blockId subBlockToPaint = go level dir blockId su
                 | dir == Horizontal = (rY root + goodRow, rHeight root)
                 | otherwise = (rX root + goodColumn, rWidth root)
               
-          trace (printf "Cut: %s %s" (show dir) (show cutLine)) $ return ()
           let [shape1, shape2] = cutShape root cutLine
+          -- trace (printf "Cut: %s %s %s => %s, %s" (show root) (show dir) (show cutLine) (show shape1) (show shape2)) $ return ()
           let subBlockId1 = blockId +. 0
               subBlockId2 = blockId +. 1
           let (smallerSubBlock, largerSubBlockId)
                 | cutLine > size `div` 2 = (shape2, subBlockId1)
                 | otherwise = (shape1, subBlockId2)
           let smallerAvgColor = calcAvgColor img smallerSubBlock
-          -- when (colorRho smallerAvgColor (PixelRGBA8 0 0 0 255) < 3) $
-          --   trace ("S.black: " ++ show root) $ return ()
           issueMove $ SetColor blockId smallerAvgColor
           issueMove $ LineCut blockId dir cutLine
           go (level-1) (anotherOrientation dir) subBlockId1 largerSubBlockId
@@ -527,7 +533,7 @@ recursiveHalfs2' level dir img blockId subBlockToPaint = go level dir blockId su
 
     cutShape :: Shape -> Coordinate -> [Shape]
     cutShape shape line
-      | dir == Horizontal = cutHorizontalShape shape line
+      | dir == Vertical = cutHorizontalShape shape line
       | otherwise = cutVerticalShape shape line
 
 solveRecursiveAndMerge :: Pixel8 -> Image PixelRGBA8 -> SolverM ()
