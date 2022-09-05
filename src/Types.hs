@@ -11,7 +11,7 @@ module Types (
     Block,
     blockId, blockShape,
     Point (..),
-    Orientation (..)
+    Orientation (..), anotherOrientation
   ) where
 
 import Codec.Picture.Types (PixelRGBA8 (..))
@@ -102,5 +102,9 @@ instance Show Point where
   show p = "(" ++ show (pX p) ++ ", " ++ show (pY p) ++ ")"
 
 data Orientation = Vertical | Horizontal
-  deriving (Eq, Show)
+  deriving (Eq, Show, Read)
+
+anotherOrientation :: Orientation -> Orientation
+anotherOrientation Vertical = Horizontal
+anotherOrientation Horizontal = Vertical
 

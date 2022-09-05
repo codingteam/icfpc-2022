@@ -80,3 +80,17 @@ imagePartDeviation img shape target =
   where
     pixelFolder y acc x = acc + pixelSimilarity (pixelAt img x y) target
     columnFold lineAcc y = foldl' (pixelFolder y) lineAcc [rX shape .. rX shape + rWidth shape - 1]
+
+imagePartDeviations :: Image PixelRGBA8 -> Shape -> Color -> (V.Vector Float, V.Vector Float)
+imagePartDeviations img shape target = (V.fromList rowsRunningSums, V.fromList columnsRunningSums)
+  where
+    pixelFolderY y acc x = acc + pixelSimilarity (pixelAt img x y) target
+    pixelFolderX x acc y = acc + pixelSimilarity (pixelAt img x y) target
+    sumByRow rowAcc y = foldl' (pixelFolderY y) rowAcc [rX shape .. rX shape + rWidth shape - 1]
+    sumByCol colAcc x = foldl' (pixelFolderX x) colAcc [rY shape .. rY shape + rHeight shape - 1]
+    rowsRunningSums = scanl sumByRow 0 [imageHeight img - rY shape - rHeight shape .. imageHeight img - rY shape - 1]
+    columnsRunningSums = scanl sumByCol 0 [imageWidth img - rX shape - rWidth shape .. imageWidth img - rX shape - 1]
+
+    
+
+

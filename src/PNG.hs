@@ -93,7 +93,7 @@ data IntegralImageRGBA = IntegralImageRGBA{
 makeIntegralImage :: Image PixelRGBA8 -> IntegralImageRGBA
 makeIntegralImage src = IntegralImageRGBA (srcWidth + 1) (srcHeight + 1) pixels
   where
-    pixels = V.fromList $ concat $ integralRows
+    pixels = V.fromList $ concat $ reverse $ integralRows
     srcWidth = imageWidth src
     srcHeight = imageHeight src
     addRows r1 r2 = map (uncurry pxAdd) $ zip r1 r2

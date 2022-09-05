@@ -5,6 +5,7 @@ import Codec.Picture.Png (writePng)
 import System.Environment
 import qualified Data.Text.IO as TIO
 
+import Types (Orientation (..))
 import Alt.DummySolver
 import Alt.SolverM
 import DummySolver
@@ -80,6 +81,11 @@ main = do
 
     ["recursiveMerge", path] -> do
         program <- runSolverSimpleM path (solveRecursiveAndMerge 2)
+        TIO.putStr $ Alt.Printer.printProgram program
+
+    ["recursiveHalfs", path, ls] -> do
+        let level = read ls
+        program <- runSolverSimpleM path (recursiveHalfs2 level Vertical)
         TIO.putStr $ Alt.Printer.printProgram program
 
     ["dumbFromInitial", cfgPath, imgPath] -> do

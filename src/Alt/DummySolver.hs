@@ -9,7 +9,7 @@ import Data.List (minimumBy)
 import Data.Function (on)
 import qualified Data.Map as M
 import qualified Data.HashMap.Strict as HMS
--- import qualified Data.Set as S
+import qualified Data.Vector as V
 import Debug.Trace
 import Text.Printf
 
@@ -421,6 +421,114 @@ paintByQuadsSearchBillboard' img blockId = do
   forM_ initQuads $ \quadId -> do
     quad <- lift $ getBlock quadId
     Billboard.solveInside img (quadId, quad)
+
+calcCurrentCost :: Image PixelRGBA8 -> SolverM Integer
+calcCurrentCost targetImage = do
+  currentImage <- lift $ gets isImage
+  cost <- lift $ gets isCost
+  return $ cost + (fromIntegral $ imageSimilarity targetImage currentImage)
+
+recursiveHalfs :: Int -> Orientation -> Image PixelRGBA8 -> SolverM ()
+recursiveHalfs level dir img = recursiveHalfs' level dir img (createBlockId 0) True
+
+recursiveHalfs' :: Int -> Orientation -> Image PixelRGBA8 -> BlockId -> Bool -> SolverM ()
+recursiveHalfs' level dir img blockId isRoot = do
+  when isRoot $
+    paintAverage blockId
+  if level == 0
+    then return ()
+    else do
+      root <- lift $ getBlock blockId
+      let middle
+            | dir == Vertical = rX root + (rWidth root `div` 2)
+            | otherwise = rY root + (rHeight root `div` 2)
+      issueMove $ LineCut blockId dir middle
+      let subBlock1 = blockId +. 0
+          subBlock2 = blockId +. 1
+      currentCost <- calcCurrentCost img
+      (subCost1, subSolverSt1, subInterpSt1) <- try $ paintAverage subBlock1
+      (subCost2, subSolverSt2, subInterpSt2) <- try $ paintAverage subBlock2
+      if subCost1 < subCost2
+        then do
+          lift $ put subInterpSt1
+          put subSolverSt1
+          recursiveHalfs' (level-1) (anotherOrientation dir) img subBlock1 False
+        else do
+          lift $ put subInterpSt2
+          put subSolverSt2
+          recursiveHalfs' (level-1) (anotherOrientation dir) img subBlock2 False
+  where
+    integralImg = makeIntegralImage img
+
+    try solver = doAndRollback $ do
+      solver
+      calcCurrentCost img
+
+    paintAverage blockId = do
+      block <- lift $ getBlock blockId
+      let avgColor = calcAvgColorFromIntegral integralImg block
+      issueMove $ SetColor blockId avgColor
+
+recursiveHalfs2 :: Int -> Orientation -> Image PixelRGBA8 -> SolverM ()
+recursiveHalfs2 level dir img = recursiveHalfs2' level dir img (createBlockId 0) (createBlockId 1)
+
+binarySearch :: Ord a => V.Vector a -> a -> Int
+binarySearch vector needle = search 0 (V.length vector - 1)
+  where
+    search min max =
+      if min+1 >= max
+        then min
+        else let middle = (min + max) `div` 2
+                 midItem = vector V.! middle
+             in  if midItem == needle
+                   then middle
+                   else if needle < midItem
+                          then search min middle
+                          else search middle max
+
+recursiveHalfs2' :: Int -> Orientation -> Image PixelRGBA8 -> BlockId -> BlockId -> SolverM ()
+recursiveHalfs2' level dir img blockId subBlockToPaint = go level dir blockId subBlockToPaint
+  where
+    go level dir blockId subBlockToPaint = do
+      root <- lift $ getBlock blockId
+      let commonAvg = calcAvgColor img root
+      when (blockId == subBlockToPaint) $ do
+        when (commonAvg == PixelRGBA8 0 0 0 255) $
+          trace ("C.black: " ++ show root) $ return ()
+        issueMove $ SetColor blockId commonAvg
+      if level == 0
+        then return ()
+        else do
+          let (runningDeltasByRows, runningDeltasByColumns) = imagePartDeviations img root commonAvg
+              totalByRows = V.last runningDeltasByRows
+              totalByColumns = V.last runningDeltasByColumns
+              goodRow = binarySearch runningDeltasByRows (totalByRows / 2.0)
+              goodColumn = binarySearch runningDeltasByColumns (totalByColumns / 2.0)
+              (cutLine, size)
+                | dir == Horizontal = (rY root + goodRow, rHeight root)
+                | otherwise = (rX root + goodColumn, rWidth root)
+              
+          trace (printf "Cut: %s %s" (show dir) (show cutLine)) $ return ()
+          let [shape1, shape2] = cutShape root cutLine
+          let subBlockId1 = blockId +. 0
+              subBlockId2 = blockId +. 1
+          let (smallerSubBlock, largerSubBlockId)
+                | cutLine > size `div` 2 = (shape2, subBlockId1)
+                | otherwise = (shape1, subBlockId2)
+          let smallerAvgColor = calcAvgColor img smallerSubBlock
+          -- when (colorRho smallerAvgColor (PixelRGBA8 0 0 0 255) < 3) $
+          --   trace ("S.black: " ++ show root) $ return ()
+          issueMove $ SetColor blockId smallerAvgColor
+          issueMove $ LineCut blockId dir cutLine
+          go (level-1) (anotherOrientation dir) subBlockId1 largerSubBlockId
+          go (level-1) (anotherOrientation dir) subBlockId2 largerSubBlockId
+
+    integralImg = makeIntegralImage img
+
+    cutShape :: Shape -> Coordinate -> [Shape]
+    cutShape shape line
+      | dir == Horizontal = cutHorizontalShape shape line
+      | otherwise = cutVerticalShape shape line
 
 solveRecursiveAndMerge :: Pixel8 -> Image PixelRGBA8 -> SolverM ()
 solveRecursiveAndMerge tolerance img = do
