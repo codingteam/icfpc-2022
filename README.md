@@ -12,7 +12,7 @@ Test it with:
 Team Members
 ------------
 
-- [ForNeVeR][fornever]
+- [ForNeVeR][fornever] ([link to report in English][report.fornever])
 - [Minoru][minoru]
 - [portnov][]
 - sergevp
@@ -24,3 +24,4 @@ Team Members
 [minoru]: https://github.com/Minoru
 [pink-snow]: https://github.com/pink-snow
 [portnov]: https://github.com/portnov
+[report.fornever]: https://fornever.me/en/posts/2022-09-05.icfpc-2022.html
