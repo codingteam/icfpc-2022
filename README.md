@@ -13,7 +13,7 @@ Team Members
 ------------
 
 - [ForNeVeR][fornever] ([link to report in English][report.fornever])
-- [Minoru][minoru]
+- [Minoru][minoru] ([отчёт][report.minoru] — report in Russian)
 - [portnov][]
 - sergevp
 - [pink-snow][]
@@ -25,3 +25,4 @@ Team Members
 [pink-snow]: https://github.com/pink-snow
 [portnov]: https://github.com/portnov
 [report.fornever]: https://fornever.me/en/posts/2022-09-05.icfpc-2022.html
+[report.minoru]: https://blog.debiania.in.ua/posts/2022-09-08-icfpc-2022.html
